@@ -1,0 +1,42 @@
+
+<launch>
+
+  <rosparam command="load" file="$(find pointcloud_registration_server)/data/registration/registration_example.yaml" />
+
+  <!--node
+    name    = "rviz"
+    pkg     = "rviz"
+    type    = "rviz"
+    args    = ""
+    output  = "screen"
+  >
+  </node-->
+  <!--include file="$(find realsense_camera)/launch/r200_nodelet_rgbd.launch">
+  </include-->
+
+  <node
+    name    = "pointcloud_processing_server"
+    pkg     = "pointcloud_processing_server"
+    type    = "pointcloud_processing_server"
+    args    = ""
+    output  = "screen"
+  >
+  </node>
+  <node
+    name    = "pointcloud_registration"
+    pkg     = "pointcloud_registration_server"
+    type    = "pointcloud_registration"
+    args    = ""
+    output  = "screen"
+  >
+  </node>
+  <node
+    name    = "registration_example_client"
+    pkg     = "pointcloud_registration_server"
+    type    = "registration_example_client"
+    args    = ""
+    output  = "screen"
+  >
+  </node>
+
+</launch>

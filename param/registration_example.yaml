@@ -1,0 +1,45 @@
+
+registration_example:
+  # stuff for the registration_client: 
+  topic:                /laser_stitcher/output_cloud #camera/depth/points
+  load_cloud:           true
+  initial_pause:        3.0
+  betwixt_pause:        8.0
+  bag_name_1:           /home/conor/catkin_ws/data/Tunnel_Scans/Aug_14_2017/Fast_Scan_1.bag
+  bag_name_2:           /home/conor/catkin_ws/data/Tunnel_Scans/Aug_14_2017/Fast_Scan_Base_Moved.bag
+  introduce_error:      true
+  introduced_error:     [0.0, 0.2, 0.2]
+  # preprocessing stuff - voxelizations and clipping!
+  preprocessing:
+    voxelize_source:      true
+    voxelize_target:      true
+    voxel_leaf_size:      0.1
+    clipping_dimensions:  [0, 5, -2.4, 2.4, 0, 2]
+    center_clipping_base: true
+    stitch_unvoxelized:   true
+    stitch_unclipped:     true
+  # registration stuff:
+  registration_name:      ndt
+  should_publish:         true
+  icp: 
+    registration_type:    1
+    epsilon:              0.001
+    max_iterations:       35
+    ksearch:              30
+    max_dist:             0.1
+    alpha:                [1.0, 1.0, 1.0, 1.0]
+  ndt: 
+    registration_type:    2
+    epsilon:              0.01
+    max_iterations:       35
+    step_size:            0.1
+    resolution:           0.5
+  # postprocessing stuff - voxelizations and clipping for final outputs!
+  postprocessing:
+    voxelize_source:      true
+    voxelize_target:      true
+    voxel_leaf_size:      0.05
+    clipping_dimensions:  [-0.5, 0.5, -2.4, 2.4, 0, 2]
+    center_clipping_base: true
+    stitch_unvoxelized:   true
+    stitch_unclipped:     true
