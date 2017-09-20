@@ -1,15 +1,17 @@
 
-# ---- Overall Stuff ----  
+# ------------------------------ REQUEST ------------------------------
+
+# ----------- Overall Stuff -----------  
 sensor_msgs/PointCloud2[] cloud_list
 
-# ---- Registration Stuff ----  
+# --------- Registration Stuff --------  
 bool should_publish
 int32 registration_type
 float32 epsilon
 int32 max_iterations
 float32[] parameters
 
-# ---- Preprocessing Stuff ---- 
+# -------- Preprocessing Stuff -------- 
 bool voxelize_target
 bool voxelize_source
 float32 voxel_leaf_size
@@ -20,16 +22,23 @@ bool stitch_unclipped
 pointcloud_processing_server/pointcloud_task[] source_tasks
 pointcloud_processing_server/pointcloud_task[] target_tasks
 
+
 ---
 
-# ---- Preprocessing Stuff ---- 
-pointcloud_processing_server/pointcloud_task_result[] source_preprocessing_results
-pointcloud_processing_server/pointcloud_task_result[] target_preprocessing_results
-float32[] source_preprocessing_time
-float32[] target_preprocessing_time
 
-# ---- Registration Stuff ----  
+# ------------------------------ RESPONSE ------------------------------
+
+# -------- Preprocessing Stuff -------- 
+pointcloud_processing_server/pointcloud_task_result[] preprocessing_results
+float32[] preprocessing_time
+
+# -------- Postprocessing Stuff -------- 
+pointcloud_processing_server/pointcloud_task_result[] postprocessing_results
+float32[] postprocessing_time
+
+# --------- Registration Stuff --------  
 sensor_msgs/PointCloud2 output_cloud
+sensor_msgs/PointCloud2 individual_clouds
 geometry_msgs/Pose[] transforms
 float32[] registration_time
 float32 total_time

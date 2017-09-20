@@ -161,7 +161,7 @@ int main (int argc, char **argv)
 	}
 
 	ROS_INFO_STREAM("[RegistrationClient] Successfully finished registration call! Time costs: " );
-	ROS_INFO_STREAM("    Preprocessing: " << reg_srv.response.source_preprocessing_time[0] << "  Preprocessing: " << reg_srv.response.target_preprocessing_time[0] << "  Registration: " << reg_srv.response.registration_time[0]);
+	ROS_INFO_STREAM("    1st Preprocessing: " << reg_srv.response.preprocessing_time[0] << "  2nd Preprocessing: " << reg_srv.response.preprocessing_time[1] << "  Registration: " << reg_srv.response.registration_time[0]);
 
 	while(ros::ok())
 	{

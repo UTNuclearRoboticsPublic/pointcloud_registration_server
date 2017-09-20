@@ -11,16 +11,15 @@ registration_example:
   introduced_error:     [0.0, 0.2, 0.2]
   # preprocessing stuff - voxelizations and clipping!
   preprocessing:
-    voxelize_source:      true
-    voxelize_target:      true
+    voxelize:             true
     voxel_leaf_size:      0.1
     clipping_dimensions:  [0, 5, -2.4, 2.4, 0, 2]
     center_clipping_base: true
-    stitch_unvoxelized:   true
-    stitch_unclipped:     true
+    stitch_unpreprocessed: true
   # registration stuff:
   registration_name:      ndt
   should_publish:         true
+  # registration algorithm parameters
   icp: 
     registration_type:    1
     epsilon:              0.001
@@ -36,10 +35,7 @@ registration_example:
     resolution:           0.5
   # postprocessing stuff - voxelizations and clipping for final outputs!
   postprocessing:
-    voxelize_source:      true
-    voxelize_target:      true
+    voxelize:             true
     voxel_leaf_size:      0.05
+    clip:                 false 
     clipping_dimensions:  [-0.5, 0.5, -2.4, 2.4, 0, 2]
-    center_clipping_base: true
-    stitch_unvoxelized:   true
-    stitch_unclipped:     true
