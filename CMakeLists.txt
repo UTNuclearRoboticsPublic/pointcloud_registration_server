@@ -43,7 +43,7 @@ target_link_libraries(
 )
 add_dependencies(
   pointcloud_registration
-  ${pcl_processing_server_EXPORTED_TARGETS}
+  ${pointcloud_registration_server_EXPORTED_TARGETS}
    ${catkin_EXPORTED_TARGETS}
 )
 
@@ -54,7 +54,7 @@ target_link_libraries(
 )
 add_dependencies(
   registration_example_client
-  ${pcl_processing_server_EXPORTED_TARGETS}
+  ${pointcloud_registration_server_EXPORTED_TARGETS}
    ${catkin_EXPORTED_TARGETS}
 )
 
