@@ -17,15 +17,20 @@ bool PCRegistration::registerPointclouds(pointcloud_registration_server::registr
 	PCP source_cloud = PCP(new PC);
 	PCP target_cloud = PCP(new PC);
 	PCP output_cloud = PCP(new PC);
-	pcl::fromROSMsg(req.cloud_list[0], *output_cloud);
 
 	// --------------------- Preprocessing ---------------------
 	std::vector<PCP> preprocessed_clouds;
 	for(int i=0; i<req.cloud_list.size(); i++)
 	{
 		preprocessing(req, res, i);
-		pcl::fromROSMsg(res.preprocessing_results[i].task_pointcloud, *preprocessed_clouds[i]);
+		ROS_DEBUG_STREAM("[PCRegistration] Successfully preprocessed a cloud! Final size is: " << res.preprocessing_results[i].task_pointcloud.height*res.preprocessing_results[i].task_pointcloud.width << ". Transforming it to the PCL data type from ROS msg and continuing.");
+		PCP temporary_cloud = PCP(new PC);
+		pcl::fromROSMsg(res.preprocessing_results[i].task_pointcloud, *temporary_cloud);
+		preprocessed_clouds.push_back(temporary_cloud);
 	}
+
+	//pcl::fromROSMsg(req.cloud_list[0], *output_cloud);
+	*output_cloud = *preprocessed_clouds[0];
 
 	// --------------------- Actually Register --------------------- 
 	// Loop over all clouds provided in service input 
@@ -33,6 +38,11 @@ bool PCRegistration::registerPointclouds(pointcloud_registration_server::registr
 	{
 		// Start time
 		ros::Time registration_start_time = ros::Time::now();
+
+		*target_cloud = *output_cloud;
+		*source_cloud = *preprocessed_clouds[i];
+		//pcl::fromROSMsg(req.cloud_list[i], *source_cloud);
+
 		
 		// Output transform for this registration
 		Eigen::Matrix4f final_transform;
@@ -100,7 +110,7 @@ bool PCRegistration::registerPointclouds(pointcloud_registration_server::registr
 	ROS_DEBUG_STREAM("[PCRegistration] Finished all registration processing.");
 
 	// --------------------- Postprocessing --------------------- 
-	postprocessing(req, res, output_cloud);
+	//postprocessing(req, res, output_cloud);
 
 	// ------------------ Outputs / Publishing ------------------ 
 	pcl::toROSMsg(*output_cloud, res.output_cloud);
@@ -236,7 +246,8 @@ void PCRegistration::registerICP(const PCP source_cloud, const PCP target_cloud,
 
 bool PCRegistration::preprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index)
 {
-	ros::ServiceClient preprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_process");
+	ROS_DEBUG_STREAM("[PCRegistration] Received preprocessing callback for cloud " << cloud_index);
+	ros::ServiceClient preprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_service");
 	int service_call_attempts = 0;
 
 	ros::Time time_start_preprocessing = ros::Time::now();
@@ -257,6 +268,7 @@ bool PCRegistration::preprocessing(pointcloud_registration_server::registration_
 		ROS_ERROR_STREAM("[PCRegistration] Attempt to call preprocessing on source cloud failed - sleeping 2 seconds and then trying again...");
 		ros::Duration(2.0).sleep();
 	};
+	ROS_DEBUG_STREAM("[PCRegistration]   Pointcloud_Processing_Server call successful. Finishing up preprocess stuff...");
 
 	// --------- Service Population ---------
 	ros::Duration preprocessing_time = ros::Time::now() - time_start_preprocessing;
@@ -279,7 +291,7 @@ bool PCRegistration::preprocessing(pointcloud_registration_server::registration_
 
 bool PCRegistration::postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, PCP output_cloud)
 {
-	ros::ServiceClient postprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_process");
+	ros::ServiceClient postprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_service");
 	int service_call_attempts = 0;
 
 	ros::Time time_start_postprocessing = ros::Time::now();
@@ -322,7 +334,7 @@ int main (int argc, char **argv)
 	ros::init(argc, argv, "pc_registration");
 
 //	if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) )
- //   	ros::console::notifyLoggerLevelsChanged();
+//    	ros::console::notifyLoggerLevelsChanged();
 
 	ROS_DEBUG_STREAM("[PCRegistration] Started up node.");
 

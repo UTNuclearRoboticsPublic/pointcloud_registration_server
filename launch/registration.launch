@@ -1,7 +1,7 @@
 
 <launch>
 
-  <rosparam command="load" file="$(find pointcloud_registration_server)/data/registration/registration_example.yaml" />
+  <rosparam command="load" file="$(find pointcloud_registration_server)/param/registration_example.yaml" />
 
   <!--node
     name    = "rviz"

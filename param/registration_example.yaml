@@ -5,8 +5,8 @@ registration_example:
   load_cloud:           true
   initial_pause:        3.0
   betwixt_pause:        8.0
-  bag_name_1:           /home/conor/catkin_ws/data/Tunnel_Scans/Aug_14_2017/Fast_Scan_1.bag
-  bag_name_2:           /home/conor/catkin_ws/data/Tunnel_Scans/Aug_14_2017/Fast_Scan_Base_Moved.bag
+  bag_name_1:           /home/conor/catkin-ws/data/Tunnel_Scans/Sep_22_2017/Fast_Scan.bag
+  bag_name_2:           /home/conor/catkin-ws/data/Tunnel_Scans/Sep_22_2017/Fast_Scan.bag
   introduce_error:      true
   introduced_error:     [0.0, 0.2, 0.2]
   # preprocessing stuff - voxelizations and clipping!
@@ -17,7 +17,7 @@ registration_example:
     center_clipping_base: true
     stitch_unpreprocessed: true
   # registration stuff:
-  registration_name:      ndt
+  registration_name:      icp
   should_publish:         true
   # registration algorithm parameters
   icp: 
