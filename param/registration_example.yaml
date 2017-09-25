@@ -8,16 +8,43 @@ registration_example:
   bag_name_1:           /home/conor/catkin-ws/data/Tunnel_Scans/Sep_22_2017/Fast_Scan.bag
   bag_name_2:           /home/conor/catkin-ws/data/Tunnel_Scans/Sep_22_2017/Fast_Scan.bag
   introduce_error:      true
-  introduced_error:     [0.0, 0.2, 0.2]
-  # preprocessing stuff - voxelizations and clipping!
-  preprocessing:
-    voxelize:             true
-    voxel_leaf_size:      0.1
-    clipping_dimensions:  [0, 5, -2.4, 2.4, 0, 2]
-    center_clipping_base: true
-    stitch_unpreprocessed: true
+  introduced_error:     [0.0, 0.1, 0.1]
+  # preprocessing stuff 
+  preprocess:
+    min_cloud_size:       50
+    # NOTE - task names in task_list below MUST match the subheadings under the tasks heading
+    task_list:            [ voxelize, clip ]
+    tasks:
+      to_base:
+        type:             1     # Transformation
+        map_name:         base
+      voxelize:           
+        type:             4     # Voxelization
+        leaf_sizes:       [ 0.2, 0.2, 0.2 ]
+        keep_ordered:     false
+      clip: 
+        type:             3     # Clipping (Cond)
+        box:              [ -4, 4, -2.4, 2.4, -0.3, 2]
+        keep_ordered:     true
+      to_map:
+        type:             1     # Transformation
+        map_name:         map
+  # postprocessing stuff
+  postprocess:
+    min_cloud_size:       50
+    # NOTE - task names in task_list below MUST match the subheadings under the tasks heading
+    task_list:            [ clip, voxelize ]
+    tasks:
+      clip: 
+        type:             3     # Clipping (Cond)
+        box:              [ -5, 5, -2.1, 2.1, -1, 3.7]
+        keep_ordered:     true
+      voxelize:           
+        type:             4     # Voxelization
+        leaf_sizes:       [ 0.02, 0.02, 0.02 ]
+        keep_ordered:     false
   # registration stuff:
-  registration_name:      icp
+  registration_name:      ndt
   should_publish:         true
   # registration algorithm parameters
   icp: 
@@ -33,9 +60,3 @@ registration_example:
     max_iterations:       35
     step_size:            0.1
     resolution:           0.5
-  # postprocessing stuff - voxelizations and clipping for final outputs!
-  postprocessing:
-    voxelize:             true
-    voxel_leaf_size:      0.05
-    clip:                 false 
-    clipping_dimensions:  [-0.5, 0.5, -2.4, 2.4, 0, 2]

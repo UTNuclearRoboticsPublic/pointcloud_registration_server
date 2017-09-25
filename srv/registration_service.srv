@@ -12,16 +12,14 @@ int32 max_iterations
 float32[] parameters
 
 # -------- Preprocessing Stuff -------- 
-bool voxelize_target
-bool voxelize_source
-float32 voxel_leaf_size
-float32[] clipping_dimensions
+bool voxelize_input
+float32 voxel_leaf_size_preprocess
+float32[] clipping_dimensions_preprocess
 bool center_clipping_base
-bool stitch_unvoxelized
-bool stitch_unclipped
-pointcloud_processing_server/pointcloud_task[] source_tasks
-pointcloud_processing_server/pointcloud_task[] target_tasks
+pointcloud_processing_server/pointcloud_task[] preprocessing_tasks
 
+# -------- Preprocessing Stuff -------- 
+pointcloud_processing_server/pointcloud_task[] postprocessing_tasks
 
 ---
 
@@ -34,7 +32,7 @@ float32[] preprocessing_time
 
 # -------- Postprocessing Stuff -------- 
 pointcloud_processing_server/pointcloud_task_result[] postprocessing_results
-float32[] postprocessing_time
+float32 postprocessing_time
 
 # --------- Registration Stuff --------  
 sensor_msgs/PointCloud2 output_cloud

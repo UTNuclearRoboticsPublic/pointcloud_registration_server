@@ -66,6 +66,8 @@ int main (int argc, char **argv)
 	ros::Subscriber topic_sub = nh.subscribe<sensor_msgs::PointCloud2>(topic, 1, pointcloudCallback);
 	ros::Publisher first_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/first_cloud", 1);
 	ros::Publisher second_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/second_cloud", 1);
+	ros::Publisher first_cloud_preprocessed = nh.advertise<sensor_msgs::PointCloud2>("registration_example/first_cloud_preprocessed", 1);
+	ros::Publisher second_cloud_preprocessed = nh.advertise<sensor_msgs::PointCloud2>("registration_example/second_cloud_preprocessed", 1);
 	ros::Publisher final_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/final_cloud", 1);
 	ros::ServiceClient client = nh.serviceClient<pointcloud_registration_server::registration_service>("register_pointclouds");
 	
@@ -136,8 +138,12 @@ int main (int argc, char **argv)
 	}
 
 	ROS_INFO_STREAM("[RegistrationClient] Introducing specified error: " << introduced_error[0] << " " << introduced_error[1] << " " << introduced_error[2]);
+	tf::TransformListener transform_listener;
+	sensor_msgs::PointCloud2 transformed_second_cloud; // Transform second cloud into map frame before offsetting it -> get offsets in map, not in camera frame 
+	ROS_INFO_STREAM("[RegistrationClient] Input cloud is in frame " << second_cloud.header.frame_id << ", so transforming it to frame map prior to offsetting.");
+	pcl_ros::transformPointCloud ("map", second_cloud, transformed_second_cloud, transform_listener);
 	PCP second_cloud_pcl = PCP(new PC());
-	pcl::fromROSMsg(second_cloud, *second_cloud_pcl);
+	pcl::fromROSMsg(transformed_second_cloud, *second_cloud_pcl);
 	for(int j=0; j<second_cloud_pcl->points.size(); j++)
 	{
 		second_cloud_pcl->points[j].x += introduced_error[0];
@@ -161,12 +167,15 @@ int main (int argc, char **argv)
 	}
 
 	ROS_INFO_STREAM("[RegistrationClient] Successfully finished registration call! Time costs: " );
-	ROS_INFO_STREAM("    1st Preprocessing: " << reg_srv.response.preprocessing_time[0] << "  2nd Preprocessing: " << reg_srv.response.preprocessing_time[1] << "  Registration: " << reg_srv.response.registration_time[0]);
-
+	ROS_INFO_STREAM("    1st Preprocessing: " << reg_srv.response.preprocessing_time[0] << "  2nd Preprocessing: " << reg_srv.response.preprocessing_time[1] << "  Registration: " << reg_srv.response.registration_time[0] << "  Postprocessing: " << reg_srv.response.postprocessing_time);
+	ROS_INFO_STREAM("    Determined Offsets: " << reg_srv.response.transforms[0].position.x << " " << reg_srv.response.transforms[0].position.y << " " << reg_srv.response.transforms[0].position.z << " " );
+ROS_INFO_STREAM("final frame: " << reg_srv.response.output_cloud.header.frame_id);
 	while(ros::ok())
 	{
 		first_cloud_pub.publish(first_cloud);
 		second_cloud_pub.publish(second_cloud);
+		first_cloud_preprocessed.publish(reg_srv.response.preprocessing_results[0].task_pointcloud);
+		second_cloud_preprocessed.publish(reg_srv.response.preprocessing_results[1].task_pointcloud);
 		final_cloud_pub.publish(reg_srv.response.output_cloud);
 		ros::Duration(0.5).sleep();
 	}
