@@ -50,7 +50,7 @@ private:
 
   	bool registerPointclouds(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res);
 	bool preprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index);
-  	bool postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, PCP output_cloud);
+  	bool postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index);
   	void registerICP(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, int ksearch, float max_dist, float alpha[4]);
   	void registerNDT(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, float step_size, float resolution);
 };

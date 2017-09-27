@@ -31,46 +31,26 @@ namespace RegCreation
 			ROS_WARN_STREAM("[RegCreation] Failed to get epsilon - defaulting to 0.001");
 		if( !nh.param<int>(yaml_file_name + "/" + name +  "/max_iterations", srv->request.max_iterations, 30) )
 			ROS_WARN_STREAM("[RegCreation] Failed to get max_iterations - defaulting to 30.");
+		// --------------------------------- Looping ----------------------------------
+		if( !nh.param<bool>(yaml_file_name + "/loop_until_threshold", temp_bool, false))
+			ROS_WARN_STREAM("[RegCreation] Failed to get loop_until_threshold - defaulting to false.");
+		srv->request.repeatedly_register = temp_bool;
+		if( !nh.param<float>(yaml_file_name + "/translation_threshold", srv->request.translation_threshold, 0.002))
+			ROS_WARN_STREAM("[RegCreation] Failed to get translation_threshold - defaulting to 0.002.");
+		if( !nh.param<float>(yaml_file_name + "/rotation_threshold", srv->request.rotation_threshold, 0.05))
+			ROS_WARN_STREAM("[RegCreation] Failed to get rotation_threshold - defaulting to 0.05.");
 
 		// ------------------------ Stuff for Preprocessing ------------------------
 		pointcloud_processing_server::pointcloud_process preprocess;
 		PointcloudTaskCreation::processFromYAML(&preprocess, "preprocess", "registration_example");
 		for(int i=0; i<preprocess.request.tasks.size(); i++)
 			srv->request.preprocessing_tasks.push_back(preprocess.request.tasks[i]);
-/*		if( !nh.param<bool>(yaml_file_name + "/preprocessing/voxelize", temp_bool, true) )
-			ROS_WARN_STREAM("[RegCreation] Failed to get voxelize bool for preprocess - defaulting to true.");
-		srv->request.voxelize_input = temp_bool;
-		if( !nh.param<float>(yaml_file_name + "/preprocessing/voxel_leaf_size", srv->request.voxel_leaf_size_preprocess, 0.01) )
-			ROS_WARN_STREAM("[RegCreation] Failed to get voxel_leaf_size for preprocess - defaulting to 0.01.");
-		if( !nh.getParam(yaml_file_name + "/preprocessing/clipping_dimensions", srv->request.clipping_dimensions_preprocess) )
-		{
-			ROS_WARN_STREAM("[RegCreation] Failed to get clipping_dimensions for preprocess - defaulting to -1 to 1 cube.");
-			for(int i=0; i<6; i++)
-				srv->request.clipping_dimensions_preprocess.push_back(pow((-1),i%2+1));
-		}
-		if( !nh.param<bool>(yaml_file_name + "/preprocessing/center_clipping_base", temp_bool, true) )
-			ROS_WARN_STREAM("[RegCreation] Failed to get center_clipping_base - defaulting to true.");
-		srv->request.center_clipping_base = temp_bool;  */
 
 		// ------------------------ Stuff for Postprocessing ------------------------
 		pointcloud_processing_server::pointcloud_process postprocess;
 		PointcloudTaskCreation::processFromYAML(&postprocess, "postprocess", "registration_example");
 		for(int i=0; i<postprocess.request.tasks.size(); i++)
 			srv->request.postprocessing_tasks.push_back(postprocess.request.tasks[i]);
-		/*if( !nh.param<bool>(yaml_file_name + "/postprocessing/voxelize", temp_bool, true) )
-			ROS_WARN_STREAM("[RegCreation] Failed to get voxelize bool for postprocess - defaulting to true.");
-		srv->request.voxelize_input = temp_bool;
-		if( !nh.param<bool>(yaml_file_name + "/postprocessing/clip", temp_bool, true) )
-			ROS_WARN_STREAM("[RegCreation] Failed to get clip bool for postprocess - defaulting to true.");
-		srv->request.clip_output = temp_bool;
-		if( !nh.param<float>(yaml_file_name + "/postprocessing/voxel_leaf_size", srv->request.voxel_leaf_size, 0.01) )
-			ROS_WARN_STREAM("[RegCreation] Failed to get voxel_leaf_size for postprocess - defaulting to 0.01.");
-		if( !nh.getParam(yaml_file_name + "/postprocessing/clipping_dimensions", srv->request.clipping_dimensions) )
-		{
-			ROS_WARN_STREAM("[RegCreation] Failed to get clipping_dimensions for postprocess - defaulting to -1 to 1 cube.");
-			for(int i=0; i<6; i++)
-				srv->request.clipping_dimensions_postprocess.push_back(pow((-1),i%2+1));
-		} */
 
 		float temp_float;
 		std::vector<float> temp_float_vector;
@@ -97,26 +77,6 @@ namespace RegCreation
 				srv->request.parameters.push_back(temp_float);
 				break;
 		}
-/*
-		if(srv->request.center_clipping_base)
-		{
-			pointcloud_processing_server::pointcloud_task transform_task = PointcloudTaskCreation::transformTask("transform", "base_link", false, "foo");
-			srv->request.preprocessing_tasks.push_back(transform_task);
-		}
-		pointcloud_processing_server::pointcloud_task clipping_task = PointcloudTaskCreation::clippingConditionalTask("clipping", srv->request.clipping_dimensions_preprocess, false, false, "foo");
-		srv->request.preprocessing_tasks.push_back(clipping_task);
-		if(srv->request.voxelize_input)
-		{
-			pointcloud_processing_server::pointcloud_task voxelization_task = PointcloudTaskCreation::voxelizationTask("voxelization", srv->request.voxel_leaf_size_preprocess, srv->request.voxel_leaf_size_preprocess, srv->request.voxel_leaf_size_preprocess, false, false, "foo");
-			srv->request.preprocessing_tasks.push_back(voxelization_task);
-		}
-		if(srv->request.center_clipping_base)
-		{
-			pointcloud_processing_server::pointcloud_task transform_task = PointcloudTaskCreation::transformTask("transform", "map", false, "foo");
-			srv->request.preprocessing_tasks.push_back(transform_task);
-		}  */
-
-
 
 		return true;
 	}

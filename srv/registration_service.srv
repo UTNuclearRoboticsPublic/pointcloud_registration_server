@@ -10,6 +10,9 @@ int32 registration_type
 float32 epsilon
 int32 max_iterations
 float32[] parameters
+bool repeatedly_register
+float32 translation_threshold
+float32 rotation_threshold
 
 # -------- Preprocessing Stuff -------- 
 bool voxelize_input
@@ -32,11 +35,13 @@ float32[] preprocessing_time
 
 # -------- Postprocessing Stuff -------- 
 pointcloud_processing_server/pointcloud_task_result[] postprocessing_results
-float32 postprocessing_time
+float32[] postprocessing_time
 
 # --------- Registration Stuff --------  
 sensor_msgs/PointCloud2 output_cloud
-sensor_msgs/PointCloud2 individual_clouds
+sensor_msgs/PointCloud2[] individual_clouds
+sensor_msgs/PointCloud2[] individual_clouds_postprocessed
 geometry_msgs/Pose[] transforms
 float32[] registration_time
+int32 iterations_run
 float32 total_time
