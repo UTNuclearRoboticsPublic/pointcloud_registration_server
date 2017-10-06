@@ -32,6 +32,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES reg_creation
+  CATKIN_DEPENDS pointcloud_processing_server
 )
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
