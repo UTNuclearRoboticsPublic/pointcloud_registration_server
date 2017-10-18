@@ -57,7 +57,7 @@ bool PCRegistration::registerPointclouds(pointcloud_registration_server::registr
 		*source_cloud = *preprocessed_clouds[i];
 
 		// Loop to allow repeated registration until transform converges to one value
-		while(!req.repeatedly_register || rotation_offset > req.rotation_threshold || translation_offset > req.translation_threshold)
+		while((!req.repeatedly_register || rotation_offset > req.rotation_threshold || translation_offset > req.translation_threshold) && ros::ok())
 		{
 			// Output transform for this registration
 

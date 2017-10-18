@@ -111,7 +111,6 @@ int main (int argc, char **argv)
 
 		std::vector<std::string> topics;
 		topics.push_back(topic);
-		//topics.push_back("/rosout");
 		rosbag::View view_1(bag_1, rosbag::TopicQuery(topics));
 
 		BOOST_FOREACH(rosbag::MessageInstance const m, view_1)
