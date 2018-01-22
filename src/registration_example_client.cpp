@@ -50,19 +50,14 @@ int main (int argc, char **argv)
 	nh.param<std::string>("registration_example/topic", topic, "camera/depth/points");
 	nh.param<float>("registration_example/initial_pause", initial_pause, 3.0);
 	nh.param<float>("registration_example/betwixt_pause", betwixt_pause, 3.0); 
-	// Incremental Registration -> multiple attempts in series
-	bool loop_until_threshold;
-	float loop_threshold;
-	nh.param<bool>("registration_example/loop_until_threshold", loop_until_threshold, false);
-	nh.param<float>("registration_example/loop_threshold", loop_threshold, 0.002);
-	// Bag Options
+
 	bool load_from_bags;
 	std::string bag_name_1;
 	std::string bag_name_2; 
 	nh.param<bool>("registration_example/load_cloud", load_from_bags, false);
 	nh.param<std::string>("registration_example/bag_name_1", bag_name_1, "cloud_1.bag");
 	nh.param<std::string>("registration_example/bag_name_2", bag_name_2, "cloud_2.bag");
-	// Introduced Error
+
 	std::vector<float> introduced_error;
 	if( !nh.getParam("registration_example/introduced_error", introduced_error) )
 		for(int i=0; i<3; i++)
@@ -71,8 +66,6 @@ int main (int argc, char **argv)
 	ros::Subscriber topic_sub = nh.subscribe<sensor_msgs::PointCloud2>(topic, 1, pointcloudCallback);
 	ros::Publisher first_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/first_cloud", 1);
 	ros::Publisher second_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/second_cloud", 1);
-	ros::Publisher first_cloud_preprocessed = nh.advertise<sensor_msgs::PointCloud2>("registration_example/first_cloud_preprocessed", 1);
-	ros::Publisher second_cloud_preprocessed = nh.advertise<sensor_msgs::PointCloud2>("registration_example/second_cloud_preprocessed", 1);
 	ros::Publisher final_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/final_cloud", 1);
 	ros::ServiceClient client = nh.serviceClient<pointcloud_registration_server::registration_service>("register_pointclouds");
 	
@@ -111,6 +104,7 @@ int main (int argc, char **argv)
 
 		std::vector<std::string> topics;
 		topics.push_back(topic);
+		//topics.push_back("/rosout");
 		rosbag::View view_1(bag_1, rosbag::TopicQuery(topics));
 
 		BOOST_FOREACH(rosbag::MessageInstance const m, view_1)
@@ -142,12 +136,8 @@ int main (int argc, char **argv)
 	}
 
 	ROS_INFO_STREAM("[RegistrationClient] Introducing specified error: " << introduced_error[0] << " " << introduced_error[1] << " " << introduced_error[2]);
-	tf::TransformListener transform_listener;
-	sensor_msgs::PointCloud2 transformed_second_cloud; // Transform second cloud into map frame before offsetting it -> get offsets in map, not in camera frame 
-	ROS_INFO_STREAM("[RegistrationClient] Input cloud is in frame " << second_cloud.header.frame_id << ", so transforming it to frame map prior to offsetting.");
-	pcl_ros::transformPointCloud ("map", second_cloud, transformed_second_cloud, transform_listener);
-	PCP second_cloud_pcl = PCP(new PC());
-	pcl::fromROSMsg(transformed_second_cloud, *second_cloud_pcl);
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr second_cloud_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
+	pcl::fromROSMsg(second_cloud, *second_cloud_pcl);
 	for(int j=0; j<second_cloud_pcl->points.size(); j++)
 	{
 		second_cloud_pcl->points[j].x += introduced_error[0];
@@ -164,44 +154,19 @@ int main (int argc, char **argv)
 	reg_srv.request.cloud_list.push_back(first_cloud);
 	reg_srv.request.cloud_list.push_back(second_cloud);
 	RegCreation::registrationFromYAML(&reg_srv, "registration_example");
-	float last_shift_magnitude = 100;
-	std::vector<float> total_offset;
-	for(int i=0; i<3; i++)
-		total_offset.push_back(0);
-	ros::Time time_start_reg = ros::Time::now();
-	int interations_run = 0;
 	while(ros::ok() && !client.call(reg_srv))
 	{
 		ROS_ERROR_STREAM("[RegistrationClient] Attempted service call but returned false. Probably not up. Restart the service node!");
 		ros::Duration(1.0).sleep();
 	}
+
 	ROS_INFO_STREAM("[RegistrationClient] Successfully finished registration call! Time costs: " );
-	ROS_INFO_STREAM("    Preprocessing    1st: " << reg_srv.response.preprocessing_time[0] << "  2nd: " << reg_srv.response.preprocessing_time[1] << " Total: " << reg_srv.response.preprocessing_time[0]+reg_srv.response.preprocessing_time[1] );
-	ROS_INFO_STREAM("    Postprocessing   1st: " << reg_srv.response.postprocessing_time[0] << "  2nd: " << reg_srv.response.postprocessing_time[1] << " Total: " << reg_srv.response.postprocessing_time[0]+reg_srv.response.postprocessing_time[1] );
-	ROS_INFO_STREAM("    Registration     " << reg_srv.response.registration_time[0]);
-	ROS_INFO_STREAM("    Translation Offset: " << reg_srv.response.transforms[0].position.x << " " << reg_srv.response.transforms[0].position.y << " " << reg_srv.response.transforms[0].position.z);
-	ROS_INFO_STREAM("    Rotation Offset:    " << reg_srv.response.transforms[0].orientation.x << " " << reg_srv.response.transforms[0].orientation.y << " " << reg_srv.response.transforms[0].orientation.z << " " << reg_srv.response.transforms[0].orientation.w);
-	float total_translation = sqrt(  pow(reg_srv.response.transforms[0].position.x,2) + pow(reg_srv.response.transforms[0].position.y,2) + pow(reg_srv.response.transforms[0].position.z,2)  );
-	float total_rotation = sqrt( 2*acos(reg_srv.response.transforms[0].orientation.w) );
-	ROS_INFO_STREAM("    Total Offsets:      T: " << total_translation << "  R: " << total_rotation*180/3.14159);
-	ROS_INFO_STREAM("    Iterations: " << reg_srv.response.iterations_run << "   Total Time: " << reg_srv.response.total_time);
-	
-	std::string bag_name;
-	nh.param<std::string>("registration_example/bag_name", bag_name, "registered_pointcloud");
-	std::string bag_topic;
-	nh.param<std::string>("registration_example/bag_topic", bag_topic, "registration_example/final_cloud");
-	ROS_INFO_STREAM("[RegistrationClient] Saving a pointcloud...");
-	rosbag::Bag bag;
-	bag.open(bag_name + ".bag", rosbag::bagmode::Write);
-	bag.write(bag_topic, ros::Time::now(), reg_srv.response.output_cloud);
-	ROS_INFO_STREAM("[RegistrationClient] Saved a ROSBAG to the file " << bag_name + ".bag");
-	
+	ROS_INFO_STREAM("    1st Preprocessing: " << reg_srv.response.preprocessing_time[0] << "  2nd Preprocessing: " << reg_srv.response.preprocessing_time[1] << "  Registration: " << reg_srv.response.registration_time[0]);
+
 	while(ros::ok())
 	{
 		first_cloud_pub.publish(first_cloud);
 		second_cloud_pub.publish(second_cloud);
-		first_cloud_preprocessed.publish(reg_srv.response.preprocessing_results[0].task_pointcloud);
-		second_cloud_preprocessed.publish(reg_srv.response.preprocessing_results[1].task_pointcloud);
 		final_cloud_pub.publish(reg_srv.response.output_cloud);
 		ros::Duration(0.5).sleep();
 	}

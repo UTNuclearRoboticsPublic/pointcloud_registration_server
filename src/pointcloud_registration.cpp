@@ -1,14 +1,22 @@
 
 #include "pointcloud_registration_server/pointcloud_registration.h"
 
-PCRegistration::PCRegistration()
+// Set up templates for PointcloudProcessing class
+//   There's a way to do this across the board for all pcl::PointT types, but I don't need that right now at least - just these three
+template class PointcloudProcessing<pcl::PointXYZ>;
+template class PointcloudProcessing<pcl::PointXYZI>;
+template class PointcloudProcessing<pcl::PointXYZRGB>;
+
+template <typename PointType> 
+PCRegistration<PointType>::PCRegistration()
 {
 	ros::ServiceServer server = nh_.advertiseService("register_pointclouds", &PCRegistration::registerPointclouds, this);
 
 	ros::spin();
 }
 	
-bool PCRegistration::registerPointclouds(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res)
+template <typename PointType> bool 
+PCRegistration<PointType>::registerPointclouds(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res)
 {	
 	// --------------------- Starting service ---------------------
 	//   Initialize clouds, set the start time
@@ -17,27 +25,15 @@ bool PCRegistration::registerPointclouds(pointcloud_registration_server::registr
 	PCP source_cloud = PCP(new PC);
 	PCP target_cloud = PCP(new PC);
 	PCP output_cloud = PCP(new PC);
-	PCP preprocessed_output = PCP(new PC);
+	pcl::fromROSMsg(req.cloud_list[0], *output_cloud);
 
-	// --------------------- Pre-/Postprocessing ---------------------
+	// --------------------- Preprocessing ---------------------
 	std::vector<PCP> preprocessed_clouds;
-	std::vector<PCP> postprocessed_clouds;
 	for(int i=0; i<req.cloud_list.size(); i++)
 	{
 		preprocessing(req, res, i);
-		postprocessing(req, res, i);
-		PCP preprocessed_pcp = PCP(new PC);
-		pcl::fromROSMsg(res.preprocessing_results[i].task_pointcloud, *preprocessed_pcp);
-		preprocessed_clouds.push_back(preprocessed_pcp);
-		PCP postprocessed_pcp = PCP(new PC);
-		pcl::fromROSMsg(res.postprocessing_results[i].task_pointcloud, *postprocessed_pcp);
-		postprocessed_clouds.push_back(postprocessed_pcp);
-		ROS_DEBUG_STREAM("[PCRegistration] Successfully pre-/postprocessed a cloud! Final sizes are: " << preprocessed_clouds[i]->points.size() << " and " << postprocessed_clouds[i]->points.size());
+		pcl::fromROSMsg(res.preprocessing_results[i].task_pointcloud, *preprocessed_clouds[i]);
 	}
-
-	*output_cloud = *postprocessed_clouds[0];
-	*preprocessed_output = *preprocessed_clouds[0];
-	res.individual_clouds.push_back(req.cloud_list[0]);
 
 	// --------------------- Actually Register --------------------- 
 	// Loop over all clouds provided in service input 
@@ -45,63 +41,34 @@ bool PCRegistration::registerPointclouds(pointcloud_registration_server::registr
 	{
 		// Start time
 		ros::Time registration_start_time = ros::Time::now();
-		res.iterations_run = 0;
+		
+		// Output transform for this registration
+		Eigen::Matrix4f final_transform;
 
-		float rotation_offset = 10000;
-		float translation_offset = 10000;
-		Eigen::Matrix4f final_transform = Eigen::Matrix4f::Identity();
-		Eigen::Matrix4f last_transform;
-
-		// Initialize Clouds
-		*target_cloud = *preprocessed_output;
-		*source_cloud = *preprocessed_clouds[i];
-
-		// Loop to allow repeated registration until transform converges to one value
-		while((!req.repeatedly_register || rotation_offset > req.rotation_threshold || translation_offset > req.translation_threshold) && ros::ok())
+		switch(req.registration_type)
 		{
-			// Output transform for this registration
-
-			ROS_ERROR_STREAM("target size: " << target_cloud->points.size() << "source size: " << source_cloud->points.size());
-
-			switch(req.registration_type)
+			case 1:
 			{
-				case 1:
-				{
-					ROS_DEBUG_STREAM("[PCRegistration] Running " << i <<"th ICP registration process.");
-					float alpha[4] = {req.parameters[2], req.parameters[3], req.parameters[4], req.parameters[5]};
-					registerICP(source_cloud, target_cloud, last_transform, req.epsilon, req.max_iterations, req.parameters[0], req.parameters[1], alpha);
-					break;
-				}
-				case 2:
-				{
-					ROS_DEBUG_STREAM("[PCRegistration] Running " << i <<"th NDT registration process.");
-					registerNDT(source_cloud, target_cloud, last_transform, req.epsilon, req.max_iterations, req.parameters[0], req.parameters[1]);
-					break;
-				}
-				default:
-				{
-					ROS_ERROR_STREAM("[PCRegistration] Registration type selected for " << i << "th registration, " << req.registration_type << ", is not (yet?) supported.");
-					break;
-				}
-			}
-			ROS_DEBUG_STREAM("[PCRegistration] Successfully registered a pair of clouds. Most Recent Transformation is: ");
-			ROS_DEBUG_STREAM("   Translation:  x: " << static_cast<double>(last_transform(0,3)) << "  y: " << static_cast<double>(last_transform(1,3)) << "  z: " << static_cast<double>(last_transform(2,3)));
-			ROS_DEBUG_STREAM("   Rotation:     x: " << static_cast<double>(last_transform(0,0)) << "  y: " << static_cast<double>(last_transform(1,1)) << "  z: " << static_cast<double>(last_transform(2,2)));
-
-			// --------------------- Transform Update / Check ---------------------
-			translation_offset = sqrt(pow(static_cast<double>(last_transform(0,3)),2) + pow(static_cast<double>(last_transform(1,3)),2) + pow(static_cast<double>(last_transform(2,3)),2));
-			rotation_offset = sqrt(pow( acos((static_cast<double>(last_transform(0,0))+static_cast<double>(last_transform(1,1))+static_cast<double>(last_transform(2,2))-1)/2) ,2));
-			ROS_DEBUG_STREAM("   Magnitudes:   T: " << translation_offset << "  R:" << rotation_offset);
-			final_transform = last_transform*final_transform;
-			ROS_DEBUG_STREAM("[PCRegistration] Total Transformation is: ");
-			ROS_DEBUG_STREAM("   Translation:  x: " << static_cast<double>(final_transform(0,3)) << "  y: " << static_cast<double>(final_transform(1,3)) << "  z: " << static_cast<double>(final_transform(2,3)));
-			ROS_DEBUG_STREAM("   Rotation:     x: " << static_cast<double>(final_transform(0,0)) << "  y: " << static_cast<double>(final_transform(1,1)) << "  z: " << static_cast<double>(final_transform(2,2)));
-
-			res.iterations_run++;
-			if(!req.repeatedly_register)
+				ROS_DEBUG_STREAM("[PCRegistration] Running " << i <<"th ICP registration process.");
+				float alpha[4] = {req.parameters[2], req.parameters[3], req.parameters[4], req.parameters[5]};
+				registerICP(source_cloud, target_cloud, output_cloud, final_transform, req.epsilon, req.max_iterations, req.parameters[0], req.parameters[1], alpha);
 				break;
+			}
+			case 2:
+			{
+				ROS_DEBUG_STREAM("[PCRegistration] Running " << i <<"th NDT registration process.");
+				registerNDT(source_cloud, target_cloud, output_cloud, final_transform, req.epsilon, req.max_iterations, req.parameters[0], req.parameters[1]);
+				break;
+			}
+			default:
+			{
+				ROS_ERROR_STREAM("[PCRegistration] Registration type selected for " << i << "th registration, " << req.registration_type << ", is not (yet?) supported.");
+				break;
+			}
 		}
+		ROS_DEBUG_STREAM("[PCRegistration] Successfully registered a pair of clouds. Transformation is: ");
 
+		// --------------------- Transformation ---------------------
 		//   -------- Reformatting the output transform (into a ROS message) --------
 		tf::Transform tf_transform_final;
 		tf::Vector3 tf_vector_final;
@@ -116,31 +83,32 @@ bool PCRegistration::registerPointclouds(pointcloud_registration_server::registr
 		tf3d.getRotation(tf_quat_final);
 		tf_transform_final.setRotation(tf_quat_final);
 
+		ROS_DEBUG_STREAM("   Translation:  x: " << tf_transform_final.getOrigin().x() << "  y: " << tf_transform_final.getOrigin().y() << "  z: " << tf_transform_final.getOrigin().z());
+		ROS_DEBUG_STREAM("   Rotation:     x: " << tf_transform_final.getRotation().getAxis().x() << "  y: " << tf_transform_final.getRotation().getAxis().y() << "  z: " << tf_transform_final.getRotation().getAxis().z() << "  w: " << tf_transform_final.getRotation().w());
+
 		geometry_msgs::Pose output_pose;
 		output_pose.position.x = tf_transform_final.getOrigin().x();
 		output_pose.position.y = tf_transform_final.getOrigin().y();
 		output_pose.position.z = tf_transform_final.getOrigin().z();
 		output_pose.orientation.x = tf_transform_final.getRotation().getAxis().x();
-		output_pose.orientation.y = tf_transform_final.getRotation().getAxis().y();
-		output_pose.orientation.z = tf_transform_final.getRotation().getAxis().z();
-		output_pose.orientation.w = tf_transform_final.getRotation().w();
+		output_pose.orientation.x = tf_transform_final.getRotation().getAxis().y();
+		output_pose.orientation.x = tf_transform_final.getRotation().getAxis().z();
+		output_pose.orientation.x = tf_transform_final.getRotation().w();
 
 		//   -------- Actually transform and concatenate clouds --------
-		PCP transformed_source = PCP(new PC);
-		PCP current_full_source = PCP(new PC);
-		pcl::transformPointCloud(*postprocessed_clouds[i], *transformed_source, final_transform); 		// currently, this is a significant time sink - is there a better way to do this step? 
+		PCP transformed_source = PCP(new PC());
+		pcl::transformPointCloud(*source_cloud, *transformed_source, final_transform);
 		*output_cloud += *transformed_source;
-		*preprocessed_output += *source_cloud; 
-		sensor_msgs::PointCloud2 transformed_source_msg; 
-		pcl::toROSMsg(*transformed_source, transformed_source_msg); 
-		res.individual_clouds.push_back(transformed_source_msg);
 
 		res.transforms.push_back(output_pose);
 
 		ros::Duration registration_duration = ros::Time::now() - registration_start_time;
-		res.registration_time.push_back(registration_duration.toSec());  
+		res.registration_time.push_back(registration_duration.toSec());
 	}
 	ROS_DEBUG_STREAM("[PCRegistration] Finished all registration processing.");
+
+	// --------------------- Postprocessing --------------------- 
+	postprocessing(req, res, output_cloud);
 
 	// ------------------ Outputs / Publishing ------------------ 
 	pcl::toROSMsg(*output_cloud, res.output_cloud);
@@ -150,13 +118,14 @@ bool PCRegistration::registerPointclouds(pointcloud_registration_server::registr
 		output_publisher.publish(res.output_cloud);
 	}
 
-	ros::Duration total_time = ros::Time::now() - callback_received_time;
+	ros::Duration total_time = callback_received_time - ros::Time::now();
 	res.total_time = total_time.toSec();
 
 	return true;
 }
 
-void PCRegistration::registerNDT(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, float step_size, float resolution) //, Eigen::Something pose_estimate)
+template <typename PointType> void 
+PCRegistration<PointType>::registerNDT(const PCP source_cloud, const PCP target_cloud, PCP output_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, float step_size, float resolution) //, Eigen::Something pose_estimate)
 {
 	// TODO
 	//   Implement odometry estimate stuff using actual robot pose
@@ -166,7 +135,7 @@ void PCRegistration::registerNDT(const PCP source_cloud, const PCP target_cloud,
 	ros::Time time_start = ros::Time::now();
 
 	// Initializing Normal Distributions Transform (NDT).
-	pcl::NormalDistributionsTransform<PCLPoint, PCLPoint> ndt;
+	pcl::NormalDistributionsTransform<PointType, PointType> ndt;
 
 	// Setting scale dependent NDT parameters
 	// Setting minimum transformation difference for termination condition.
@@ -190,16 +159,16 @@ void PCRegistration::registerNDT(const PCP source_cloud, const PCP target_cloud,
 	Eigen::Matrix4f init_guess = (init_translation * init_rotation).matrix ();
 
 	// Calculating required rigid transform to align the input cloud to the target cloud.
-	ndt.align (*source_cloud, init_guess);
+	ndt.align (*output_cloud, init_guess);
 
 	final_transform = ndt.getFinalTransformation();
-	pcl::transformPointCloud(*source_cloud, *source_cloud, final_transform);
 
 	ros::Duration registration_duration = ros::Time::now() - time_start;
 	ROS_DEBUG_STREAM("[PCRegistration] Finished NDT Registration! Entire registration process took " << registration_duration << " seconds.");
 }
 
-void PCRegistration::registerICP(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, int ksearch, float max_dist, float alpha[4])
+template <typename PointType> void 
+PCRegistration<PointType>::registerICP(const PCP source_cloud, const PCP target_cloud, PCP output_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, int ksearch, float max_dist, float alpha[4])
 {	
 	ROS_DEBUG_STREAM("[PCRegistration] Starting ICP Process!  Epsilon: " << epsilon << "  Max_It:" << max_iterations << "  K_Search: " << ksearch << "  Max_Dist: " << max_dist << "  Alpha: " << alpha[0] << alpha[1] << alpha[2] << alpha[3]);
 
@@ -214,8 +183,9 @@ void PCRegistration::registerICP(const PCP source_cloud, const PCP target_cloud,
 	pcl::removeNaNFromPointCloud(*source_cloud, *source_cloud, index_source);
 	pcl::removeNaNFromPointCloud(*target_cloud, *target_cloud, index_target);
 
-	pcl::NormalEstimation<PCLPoint, PCLPointNormal> norm_est;
-	pcl::search::KdTree<PCLPoint>::Ptr tree (new pcl::search::KdTree<PCLPoint> ());
+	pcl::NormalEstimation<PointType, PCLPointNormal> norm_est;
+	typedef typename pcl::search::KdTree<PointType>::Ptr KdTreePtr;
+	KdTreePtr tree (new pcl::search::KdTree<PointType> ());
 	norm_est.setSearchMethod (tree);
 	norm_est.setKSearch (ksearch);
 	ROS_DEBUG_STREAM("[PCRegistration] Initialized norm_est object.");
@@ -263,40 +233,30 @@ void PCRegistration::registerICP(const PCP source_cloud, const PCP target_cloud,
 	reg.setInputSource (points_with_normals_source);
 	ros::Time before = ros::Time::now();
 	reg.align (*reg_result);
-	final_transform = reg.getFinalTransformation();
-	// Manually populate source with new points (probably faster than just transforming? is there a way to do this more cleanly?)
-	source_cloud->points.clear();
-	for(int i=0; i<reg_result->points.size(); i++)
-	{
-		PCLPoint point;
-		point.x = reg_result->points[i].x;
-		point.y = reg_result->points[i].y;
-		point.z = reg_result->points[i].z;
-		source_cloud->points.push_back(point);
-	}  
 	ros::Time after = ros::Time::now();
 	ros::Duration time_elapsed = after - before;
 	ROS_DEBUG_STREAM("[PCRegistration] Performed registration - it took " << time_elapsed << " seconds.");
 	
 	//accumulate transformation between each Iteration
+	final_transform = reg.getFinalTransformation () * source_to_target;
 	ROS_DEBUG_STREAM("[PCRegistration] Found final transformation.");	
 
 	ros::Duration registration_duration = ros::Time::now() - time_start;
 	ROS_DEBUG_STREAM("[PCRegistration] Finished ICP Registration! Entire registration process took " << registration_duration << " seconds.");
 }
 
-bool PCRegistration::preprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index)
+template <typename PointType> bool 
+PCRegistration<PointType>::preprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index)
 {
-	ROS_DEBUG_STREAM("[PCRegistration] Received preprocessing callback for cloud " << cloud_index);
-	ros::ServiceClient preprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_service");
+	ros::ServiceClient preprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_process");
 	int service_call_attempts = 0;
 
 	ros::Time time_start_preprocessing = ros::Time::now();
 	// --------- Source Cloud Preprocessing ---------
 	pointcloud_processing_server::pointcloud_process preprocess;
-	for(int i=0; i<req.preprocessing_tasks.size(); i++)
+	for(int i=0; i<req.source_tasks.size(); i++)
 	{
-		preprocess.request.tasks.push_back(req.preprocessing_tasks[i]);
+		preprocess.request.tasks.push_back(req.source_tasks[i]);
 	}
 	preprocess.request.pointcloud = req.cloud_list[cloud_index];
 	preprocess.request.pointcloud.header.stamp = ros::Time::now();
@@ -309,14 +269,13 @@ bool PCRegistration::preprocessing(pointcloud_registration_server::registration_
 		ROS_ERROR_STREAM("[PCRegistration] Attempt to call preprocessing on source cloud failed - sleeping 2 seconds and then trying again...");
 		ros::Duration(2.0).sleep();
 	};
-	ROS_DEBUG_STREAM("[PCRegistration]   Pointcloud_Processing_Server call successful. Finishing up preprocess stuff...");
 
 	// --------- Service Population ---------
 	ros::Duration preprocessing_time = ros::Time::now() - time_start_preprocessing;
 	res.preprocessing_time.push_back(preprocessing_time.toSec());
 	
 	// If failed
-	if(service_call_attempts > max_attempts || preprocess.request.tasks.size() < 1)
+	if(service_call_attempts > max_attempts)
 	{
 		ROS_ERROR_STREAM("[PCRegistration] Failed to preprocess " << cloud_index << "th cloud " << max_attempts << " times. Returning unprocessed...");
 		pointcloud_processing_server::pointcloud_task_result failed_task_result;
@@ -330,62 +289,18 @@ bool PCRegistration::preprocessing(pointcloud_registration_server::registration_
 	return true;
 }
 
-bool PCRegistration::postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index)
+template <typename PointType> bool 
+PCRegistration<PointType>::postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, PCP output_cloud)
 {
-	ROS_DEBUG_STREAM("[PCRegistration] Received postprocessing callback for cloud " << cloud_index);
-	ros::ServiceClient postprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_service");
-	int service_call_attempts = 0;
-
-	ros::Time time_start_postprocessing = ros::Time::now();
-	// --------- Source Cloud Postprocessing ---------
-	pointcloud_processing_server::pointcloud_process postprocess;
-	for(int i=0; i<req.postprocessing_tasks.size(); i++)
-	{
-		postprocess.request.tasks.push_back(req.postprocessing_tasks[i]);
-	}
-	postprocess.request.pointcloud = req.cloud_list[cloud_index];
-	postprocess.request.pointcloud.header.stamp = ros::Time::now();
-	postprocess.request.min_cloud_size = 100;
-	ROS_DEBUG_STREAM("[PCRegistration] Postprocessing a cloud. Size: " << req.cloud_list[cloud_index].width*req.cloud_list[cloud_index].height << "; i=" << cloud_index << "; process size: " << postprocess.request.tasks.size() );
-	int max_attempts = 5;
-	while(ros::ok() && !postprocessor.call(postprocess) && service_call_attempts<max_attempts)
-	{
-		service_call_attempts++;
-		ROS_ERROR_STREAM("[PCRegistration] Attempt to call postprocessing on source cloud failed - sleeping 2 seconds and then trying again...");
-		ros::Duration(2.0).sleep();
-	};
-	ROS_DEBUG_STREAM("[PCRegistration]   Pointcloud_Processing_Server call successful. Finishing up postprocess stuff...");
-
-	// --------- Service Population ---------
-	ros::Duration postprocessing_time = ros::Time::now() - time_start_postprocessing;
-	res.postprocessing_time.push_back(postprocessing_time.toSec());
-	
-	// If failed
-	if(service_call_attempts > max_attempts || postprocess.request.tasks.size() < 1)
-	{
-		ROS_ERROR_STREAM("[PCRegistration] Failed to postprocess " << cloud_index << "th cloud " << max_attempts << " times. Returning unprocessed...");
-		pointcloud_processing_server::pointcloud_task_result failed_task_result;
-		failed_task_result.task_pointcloud = req.cloud_list[cloud_index];
-		res.postprocessing_results.push_back(failed_task_result);
-		return false;
-	}
-	// Else - right now, only saving the last task result from each postprocess! Otherwise need to make an extra message (vector of vector of task_results...)
-	int postprocess_size = postprocess.request.tasks.size();
-	res.postprocessing_results.push_back(postprocess.response.task_results[postprocess_size-1]);
-	return true;
-}
-/*
-bool PCRegistration::postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, PCP output_cloud)
-{
-	ros::ServiceClient postprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_service");
+	ros::ServiceClient postprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_process");
 	int service_call_attempts = 0;
 
 	ros::Time time_start_postprocessing = ros::Time::now();
 	// --------- Source Cloud Preprocessing ---------
 	pointcloud_processing_server::pointcloud_process postprocess;
-	for(int i=0; i<req.postprocessing_tasks.size(); i++)
+	for(int i=0; i<req.source_tasks.size(); i++)
 	{
-		postprocess.request.tasks.push_back(req.postprocessing_tasks[i]);
+		postprocess.request.tasks.push_back(req.source_tasks[i]);
 	}
 	pcl::toROSMsg(*output_cloud, postprocess.request.pointcloud);
 	postprocess.request.pointcloud.header.stamp = ros::Time::now();
@@ -401,7 +316,7 @@ bool PCRegistration::postprocessing(pointcloud_registration_server::registration
 
 	// --------- Service Population ---------
 	ros::Duration postprocessing_time = ros::Time::now() - time_start_postprocessing;
-	res.postprocessing_time = postprocessing_time.toSec();
+	res.postprocessing_time.push_back(postprocessing_time.toSec());
 	
 	// If failed
 	if(service_call_attempts > max_attempts)
@@ -412,20 +327,25 @@ bool PCRegistration::postprocessing(pointcloud_registration_server::registration
 	// Else - right now, only saving the last task result from each postprocess! Otherwise need to make an extra message (vector of vector of task_results...)
 	int postprocess_size = postprocess.request.tasks.size();
 	res.postprocessing_results.push_back(postprocess.response.task_results[postprocess_size-1]);
-	pcl::fromROSMsg(postprocess.response.task_results[postprocess_size-1].task_pointcloud, *output_cloud);
 	return true;
-}  */
+}
 
 int main (int argc, char **argv)
 { 
 	ros::init(argc, argv, "pc_registration");
 
-	if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) )
-    	ros::console::notifyLoggerLevelsChanged();
+//	if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) )
+ //   	ros::console::notifyLoggerLevelsChanged();
 
 	ROS_DEBUG_STREAM("[PCRegistration] Started up node.");
 
-	PCRegistration registration_server;
+	PCRegistration<pcl::PointXYZ> server;
+	if(argv[argc-1] == "--intensity")
+		PCRegistration<pcl::PointXYZI> server;
+	else if(argv[argc-1] == "--color")
+		PCRegistration<pcl::PointXYZRGB> server;
+	else if(argv[argc-1] != "--xyz")
+		ROS_WARN_STREAM("[PCRegistration] Point type not specified! Defaulting to PointXYZ.");
 
 	return 0;
 }

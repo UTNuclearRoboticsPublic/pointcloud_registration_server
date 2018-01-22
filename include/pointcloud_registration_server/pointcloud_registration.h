@@ -19,10 +19,13 @@ typedef pcl::PointXYZRGBNormal PCLPointNormal;
 typedef pcl::PointCloud<PCLPointNormal> PCN;
 typedef pcl::PointCloud<PCLPointNormal>::Ptr PCNP;
 
+template <typename PointType>
 class PCRegistration
 {
 public:
 	PCRegistration();
+	typedef typename pcl::PointCloud<PointType> PC;
+	typedef typename pcl::PointCloud<PointType>::Ptr PCP;
 
 	class MyPointRepresentation : public pcl::PointRepresentation <PCLPointNormal>
 	{
@@ -50,9 +53,9 @@ private:
 
   	bool registerPointclouds(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res);
 	bool preprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index);
-  	bool postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index);
-  	void registerICP(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, int ksearch, float max_dist, float alpha[4]);
-  	void registerNDT(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, float step_size, float resolution);
+  	bool postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, PCP output_cloud);
+  	void registerICP(const PCP source_cloud, const PCP target_cloud, PCP output_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, int ksearch, float max_dist, float alpha[4]);
+  	void registerNDT(const PCP source_cloud, const PCP target_cloud, PCP output_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, float step_size, float resolution);
 };
 
 #endif // REGISTER_POINTCLOUDS
