@@ -55,8 +55,8 @@ int main (int argc, char **argv)
 	std::string bag_name_1;
 	std::string bag_name_2; 
 	nh.param<bool>("registration_example/load_cloud", load_from_bags, false);
-	nh.param<std::string>("registration_example/bag_name_1", bag_name_1, "cloud_1.bag");
-	nh.param<std::string>("registration_example/bag_name_2", bag_name_2, "cloud_2.bag");
+	nh.param<std::string>("registration_example/bag_name_1", bag_name_1, "./cloud_1.bag");
+	nh.param<std::string>("registration_example/bag_name_2", bag_name_2, "./cloud_2.bag");
 
 	std::vector<float> introduced_error;
 	if( !nh.getParam("registration_example/introduced_error", introduced_error) )
