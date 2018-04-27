@@ -10,7 +10,7 @@ The user can set pre-registration settings like voxelizations and spatial clippi
 
 <img src=images/registration.png width="600">
 
-In the above example, two pointclouds were taken using the [laser_stitcher](https://github.com/UTNuclearRoboticsPublic/laser_stitcher) package from two slighlty different vantage points. Artificial errors were introduced to one cloud in position and rotation, and registration was performed between the clouds to correct this error and stitch them into a single pointcloud map of the scene. 
+In the above example, two pointclouds were taken using the [laser_stitcher](https://github.com/UTNuclearRoboticsPublic/laser_stitcher) package from two slightly different vantage points. Artificial errors were introduced to one cloud in position and rotation, and registration was performed between the clouds to correct this error and stitch them into a single pointcloud map of the scene. 
 
 ## Parameter Setup
 
