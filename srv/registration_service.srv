@@ -1,8 +1,22 @@
+uint8 POINT_TYPE_XYZ=0
+uint8 POINT_TYPE_XYZI=1
+uint8 POINT_TYPE_XYZN=2
+uint8 INTEREST_IND_NONE=0
+uint8 INTEREST_IND_NORM=1
+uint8 INTEREST_IND_SIFT=2
+uint8 FEATURE_IND_NONE=0
+uint8 FEATURE_IND_NORM=1
+uint8 FEATURE_IND_SIFT=2
 
 # ------------------------------ REQUEST ------------------------------
 
 # ----------- Overall Stuff -----------  
 sensor_msgs/PointCloud2[] cloud_list
+int32 point_type
+int32 feature_type
+int32 interest_point_type
+int32 correspondence_search_type
+int32 transformation_search_type
 
 # --------- Registration Stuff --------  
 bool should_publish

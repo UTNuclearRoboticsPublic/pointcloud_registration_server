@@ -1,26 +1,35 @@
 #include "pointcloud_registration_server/pointcloud_registration.h"
 
-template <typename PointType>
-PCRegistration<PointType>::PCRegistration()
-{
-	ros::ServiceServer server = nh_.advertiseService("register_pointclouds", &PCRegistration::registerPointclouds, this);
-
-	ros::spin();
-}
 	
-template <typename PointType>
-bool PCRegistration<PointType>::registerPointclouds(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res)
+bool registerPointclouds(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res)
 {	
 	// --------------------- Starting service ---------------------
 	//   Initialize clouds, set the start time
 	ros::Time callback_received_time = ros::Time::now();
 	ROS_DEBUG_STREAM("[PCRegistration] Received service callback.");
-	PCP source_cloud = PCP(new PC);
-	PCP target_cloud = PCP(new PC);
-	PCP output_cloud = PCP(new PC);
-	PCP preprocessed_output = PCP(new PC);
+
+	switch(req.point_type)
+	{
+		case pointcloud_registration_server::registration_service::Request::POINT_TYPE_XYZ:
+		{
+
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::POINT_TYPE_XYZI:
+		{
+
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::POINT_TYPE_XYZN:
+		{
+
+			break;
+		}
+	}
+
 
 	// --------------------- Pre-/Postprocessing ---------------------
+	/*
 	std::vector<PCP> preprocessed_clouds;
 	std::vector<PCP> postprocessed_clouds;
 	for(int i=0; i<req.cloud_list.size(); i++)
@@ -155,10 +164,234 @@ bool PCRegistration<PointType>::registerPointclouds(pointcloud_registration_serv
 	res.total_time = total_time.toSec();
 
 	return true;
+
+	*/
 }
 
-template <typename PointType>
-void PCRegistration<PointType>::registerNDT(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, float step_size, float resolution) //, Eigen::Something pose_estimate)
+
+
+template <typename PointType, typename FeatureType>
+PCRegistration<PointType, FeatureType>::PCRegistration()
+{
+	ros::ServiceServer server = nh_.advertiseService("register_pointclouds", &PCRegistration::registerPointclouds, this);
+
+	ros::spin();
+}
+
+
+// --------------------------------------------------------------------------------------
+// Interest Point Generation 
+//   Generate a cloud of points which are considered especially salient (different from surroundings, 'important' for registration)
+//   
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::interestPointGeneration(const PCP input_cloud, const PCP interest_point_cloud, int algorithm_type)
+{
+	switch(algorithm_type)
+	{
+		// If NO interest points are desired
+		case pointcloud_registration_server::registration_service::Request::INTEREST_IND_NONE:
+		{
+			*interest_point_cloud = *input_cloud;
+			break;
+		}
+		// If SIFT interest points are selected
+		case pointcloud_registration_server::registration_service::Request::INTEREST_IND_SIFT:
+		{
+			break;
+		}
+		// No interest point type is specified
+		default:
+		{
+			ROS_WARN_STREAM("[PCRegistration] No interest point type specified... defaulting to not using interest points.");
+			*interest_point_cloud = *input_cloud;
+			break;
+		}
+	}
+}
+// --------------------------------------------------------------------------------------
+
+
+
+// --------------------------------------------------------------------------------------
+// Feature Estimation 
+//   Evaluate features at each point in the interest cloud
+//   
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::featureEstimation(const PCP input_cloud, const FCP feature_cloud, int feature_type)
+{
+	switch(feature_type)
+	{
+		case pointcloud_registration_server::registration_service::Request::FEATURE_IND_NONE:
+		{
+			*feature_cloud = *input_cloud;
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::FEATURE_IND_NORM:
+		{
+			featureEstimationNormals(input_cloud, feature_cloud);
+			break;
+		}
+		default:
+		{
+			if(typeid(PointType).name()==typeid(FeatureType).name())
+			{
+				ROS_WARN_STREAM("PCRegistration] No feature type specified... continuing without estimating features, using input cloud.");
+				*input_cloud = *feature_cloud;
+			}
+			else
+			{
+				ROS_ERROR_STREAM("PCRegistration] No feature type specified... Exiting!");
+				return;
+			}
+			break;
+		} 
+	}
+}
+
+
+// ---------------------------------------------------------
+// Normal Estimation
+//   Evaluate surface normals at each point in an input cloud
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::featureEstimationNormals(const PCP input_cloud, const FCP feature_cloud)
+{
+	ROS_DEBUG_STREAM("[PCRegistration] Finding surface normals. First, removing all NaNs from cloud.");
+
+	// Remove NaNs from cloud (otherwise norm calc may fail)
+	std::vector<int> index_source;
+	pcl::removeNaNFromPointCloud(*input_cloud, *feature_cloud, index_source);
+
+	// Initialize Norm_Est object
+	pcl::NormalEstimation<PointType, PCLPointNormal> norm_est;
+	typedef typename pcl::search::KdTree<PointType>::Ptr KDTree;
+	KDTree tree (new pcl::search::KdTree<PointType> ());
+	norm_est.setSearchMethod (tree);
+	norm_est.setKSearch (features_ksearch_);
+	norm_est.setInputCloud (input_cloud);
+
+	// Perform Computation
+	norm_est.compute (*feature_cloud);
+}
+// ---------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------------
+
+
+
+
+// --------------------------------------------------------------------------------------
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::correspondenceEstimation(const FCP feature_cloud, const PCP correspondence_cloud, int correspondence_type)
+{
+	switch(correspondence_type)
+	{
+		default:
+		{
+			if(typeid(PointType).name()==typeid(FeatureType).name())
+			{
+				ROS_WARN_STREAM("PCRegistration] No correspondence estimation algorithm specified... continuing without correspondences.");
+				*correspondence_cloud = *feature_cloud;
+			}
+			else
+			{
+				ROS_ERROR_STREAM("PCRegistration] No correspondence estimation algorithm specified... Exiting!");
+				return;
+			}
+			break;
+		}
+	}
+}
+
+// --------------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------------
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::transformEstimation(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f transform, int transform_type)
+{
+	Eigen::Matrix4f initial_transform_guess = Eigen::Matrix4f::Identity();
+	transformEstimation(source_cloud, target_cloud, transform, transform_type, initial_transform_guess);
+}
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::transformEstimation(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f transform, int transform_type, Eigen::Matrix4f initial_transform_guess)
+{
+	switch(transform_type)
+	{
+		default:
+		{
+			break;
+		}
+	}
+}
+
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::transformEstimationNDT(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f transform, Eigen::Matrix4f init_guess)
+{	
+	ROS_DEBUG_STREAM("[PCRegistration] Starting NDT Process!  Epsilon: " << transform_epsilon_ << "  Max_It: " << transform_max_iterations_ << "  Step Size: " << transform_step_size_ << "  Res: " << transform_resolution_);
+
+	// Initializing Normal Distributions Transform (NDT).
+	pcl::NormalDistributionsTransform<PointType, PointType> ndt;
+
+	// Setting scale dependent NDT parameters
+	// Setting minimum transformation difference for termination condition.
+	ndt.setTransformationEpsilon (transform_epsilon_);
+	// Setting maximum step size for More-Thuente line search.
+	ndt.setStepSize (transform_step_size_);
+	//Setting Resolution of NDT grid structure (VoxelGridCovariance).
+	ndt.setResolution (transform_resolution_);
+	// Setting max number of registration iterations.
+	ndt.setMaximumIterations (transform_max_iterations_);
+
+	// Setting point cloud to be aligned.
+	ndt.setInputSource (source_cloud);
+	// Setting point cloud to be aligned to.
+	ndt.setInputTarget (target_cloud);
+
+	// Calculating required rigid transform to align the input cloud to the target cloud.
+	ndt.align (*transformed_source, init_guess);
+	transform = ndt.getFinalTransformation();
+}
+
+
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::transformEstimationICP(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f transform, Eigen::Matrix4f init_guess)
+{	
+	// Instantiate our custom point representation (defined above) ...
+	MyPointRepresentation point_representation;
+	// ... and weight the 'curvature' dimension so that it is balanced against x, y, and z
+	point_representation.setRescaleValues (transform_alpha_);
+	ROS_DEBUG_STREAM("[PCRegistration] Initialized point_representation.");
+
+	// Align
+	pcl::IterativeClosestPointNonLinear<PCLPointNormal, PCLPointNormal> reg;
+	reg.setTransformationEpsilon (transform_epsilon_);
+	// Set the maximum distance between two correspondences (src<->tgt) to 10cm
+	// Note: adjust this based on the size of your datasets
+	reg.setMaxCorrespondenceDistance (transform_max_dist_);  
+	// Set the point representation
+	reg.setPointRepresentation (boost::make_shared<const MyPointRepresentation> (point_representation));
+	reg.setMaximumIterations (transform_max_iterations_);
+
+	// Remove NaNs, else estimate may crash
+	std::vector<int> index_source_normal, index_target_normal;
+	pcl::removeNaNFromPointCloud(*source_cloud, *source_cloud, index_source_normal);
+	pcl::removeNaNFromPointCloud(*target_cloud, *target_cloud, index_target_normal);	
+
+	reg.setInputSource (source_cloud);
+	reg.setInputTarget (target_cloud);
+
+	// Estimate
+	ros::Time before = ros::Time::now();
+	reg.align (*transformed_source);
+	transform = reg.getFinalTransformation();
+}
+// --------------------------------------------------------------------------------------
+
+/*
+
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::transformNDT(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, float step_size, float resolution) //, Eigen::Something pose_estimate)
 {
 	// TODO
 	//   Implement odometry estimate stuff using actual robot pose
@@ -201,8 +434,8 @@ void PCRegistration<PointType>::registerNDT(const PCP source_cloud, const PCP ta
 	ROS_DEBUG_STREAM("[PCRegistration] Finished NDT Registration! Entire registration process took " << registration_duration << " seconds.");
 }
 
-template <typename PointType>
-void PCRegistration<PointType>::registerICP(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, int ksearch, float max_dist, float alpha[4])
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::transformICP(const PCP source_cloud, const PCP target_cloud, Eigen::Matrix4f &final_transform, float epsilon, int max_iterations, int ksearch, float max_dist, float alpha[4])
 {	
 	ROS_DEBUG_STREAM("[PCRegistration] Starting ICP Process!  Epsilon: " << epsilon << "  Max_It:" << max_iterations << "  K_Search: " << ksearch << "  Max_Dist: " << max_dist << "  Alpha: " << alpha[0] << alpha[1] << alpha[2] << alpha[3]);
 
@@ -288,9 +521,9 @@ void PCRegistration<PointType>::registerICP(const PCP source_cloud, const PCP ta
 	ros::Duration registration_duration = ros::Time::now() - time_start;
 	ROS_DEBUG_STREAM("[PCRegistration] Finished ICP Registration! Entire registration process took " << registration_duration << " seconds.");
 }
-
-template <typename PointType>
-bool PCRegistration<PointType>::preprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index)
+*/
+template <typename PointType, typename FeatureType>
+bool PCRegistration<PointType, FeatureType>::preprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index)
 {
 	ROS_DEBUG_STREAM("[PCRegistration] Received preprocessing callback for cloud " << cloud_index);
 	ros::ServiceClient preprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_service");
@@ -335,8 +568,8 @@ bool PCRegistration<PointType>::preprocessing(pointcloud_registration_server::re
 	return true;
 }
 
-template <typename PointType>
-bool PCRegistration<PointType>::postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index)
+template <typename PointType, typename FeatureType>
+bool PCRegistration<PointType, FeatureType>::postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, int cloud_index)
 {
 	ROS_DEBUG_STREAM("[PCRegistration] Received postprocessing callback for cloud " << cloud_index);
 	ros::ServiceClient postprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_service");
@@ -380,45 +613,9 @@ bool PCRegistration<PointType>::postprocessing(pointcloud_registration_server::r
 	res.postprocessing_results.push_back(postprocess.response.task_results[postprocess_size-1]);
 	return true;
 }
-/*
-bool PCRegistration::postprocessing(pointcloud_registration_server::registration_service::Request& req, pointcloud_registration_server::registration_service::Response& res, PCP output_cloud)
-{
-	ros::ServiceClient postprocessor = nh_.serviceClient<pointcloud_processing_server::pointcloud_process>("pointcloud_service");
-	int service_call_attempts = 0;
-	ros::Time time_start_postprocessing = ros::Time::now();
-	// --------- Source Cloud Preprocessing ---------
-	pointcloud_processing_server::pointcloud_process postprocess;
-	for(int i=0; i<req.postprocessing_tasks.size(); i++)
-	{
-		postprocess.request.tasks.push_back(req.postprocessing_tasks[i]);
-	}
-	pcl::toROSMsg(*output_cloud, postprocess.request.pointcloud);
-	postprocess.request.pointcloud.header.stamp = ros::Time::now();
-	postprocess.request.min_cloud_size = 100;
-	ROS_DEBUG_STREAM("[PCRegistration] Preprocessing a cloud. Size: " << output_cloud->size() << "; process size: " << postprocess.request.tasks.size() );
-	int max_attempts = 5;
-	while(ros::ok() && !postprocessor.call(postprocess) && service_call_attempts<max_attempts)
-	{
-		service_call_attempts++;
-		ROS_ERROR_STREAM("[PCRegistration] Attempt to call postprocessing on source cloud failed - sleeping 2 seconds and then trying again...");
-		ros::Duration(2.0).sleep();
-	};
-	// --------- Service Population ---------
-	ros::Duration postprocessing_time = ros::Time::now() - time_start_postprocessing;
-	res.postprocessing_time = postprocessing_time.toSec();
-	
-	// If failed
-	if(service_call_attempts > max_attempts)
-	{
-		ROS_ERROR_STREAM("[PCRegistration] Failed to postprocess output cloud " << max_attempts << " times. Returning unprocessed...");
-		return false;
-	}
-	// Else - right now, only saving the last task result from each postprocess! Otherwise need to make an extra message (vector of vector of task_results...)
-	int postprocess_size = postprocess.request.tasks.size();
-	res.postprocessing_results.push_back(postprocess.response.task_results[postprocess_size-1]);
-	pcl::fromROSMsg(postprocess.response.task_results[postprocess_size-1].task_pointcloud, *output_cloud);
-	return true;
-}  */
+
+
+
 
 int main (int argc, char **argv)
 { 
@@ -429,15 +626,9 @@ int main (int argc, char **argv)
 
 	ROS_DEBUG_STREAM("[PCRegistration] Started up node.");
 
-	if(argv[argc-1] == "--intensity")
-		PCRegistration<pcl::PointXYZI> server;
-	else if(argv[argc-1] == "--color")
-		PCRegistration<pcl::PointXYZRGB> server;
-	else if(argv[argc-1] != "--xyz")
-	{
-		ROS_WARN_STREAM("[PCRegistration] Point type not specified! Defaulting to PointXYZ.");
-		PCRegistration<pcl::PointXYZ> server;
-	}
+	ros::NodeHandle nh;
+	ros::ServiceServer server = nh.advertiseService("pointcloud_registration", &registerPointclouds);
 
-	return 0;
+	ros::spin();
+
 }
