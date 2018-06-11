@@ -8,7 +8,7 @@ registration_example:
   bag_name_1:             /home/conor/catkin-ws/data/Tunnel_Scans/Sep_27_2017/400_mrad_s.bag
   bag_name_2:             /home/conor/catkin-ws/data/Tunnel_Scans/Sep_27_2017/400_mrad_s_moved.bag
   introduce_error:        true
-  introduced_error:       [0.00, 0.00, 0.00]
+  introduced_error:       [0.00, 0.0, 0]
   loop_until_threshold:   true
   translation_threshold:  0.0005
   rotation_threshold:     0.001
@@ -25,11 +25,11 @@ registration_example:
         map_name:         base
       voxelize:           
         type:             4     # Voxelization
-        leaf_sizes:       [ 0.1, 0.1, 0.1 ]
+        leaf_sizes:       [ 0.2, 0.1, 0.2 ]
         keep_ordered:     false
       clip: 
         type:             3     # Clipping (Cond)
-        box:              [ -1, 5, -2.4, 2.4, -0.3, 0.65]
+        box:              [ -1, 5, -2.4, 2.4, -0.7, 2.5]
         keep_ordered:     true
       to_map:
         type:             1     # Transformation

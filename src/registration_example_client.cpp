@@ -65,6 +65,8 @@ int main (int argc, char **argv)
 
 	ros::Subscriber topic_sub = nh.subscribe<sensor_msgs::PointCloud2>(topic, 1, pointcloudCallback);
 	ros::Publisher first_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/first_cloud", 1);
+	ros::Publisher second_cloud_preprocessed_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/second_cloud_preprocessed", 1);
+	ros::Publisher first_cloud_preprocessed_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/first_cloud_preprocessed", 1);
 	ros::Publisher second_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/second_cloud", 1);
 	ros::Publisher final_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/final_cloud", 1);
 	ros::ServiceClient client = nh.serviceClient<pointcloud_registration_server::registration_service>("register_pointclouds");
@@ -146,6 +148,8 @@ int main (int argc, char **argv)
 	}
 	pcl::toROSMsg(*second_cloud_pcl, second_cloud);
 
+	ROS_ERROR_STREAM("errors: " << introduced_error[0] << " " << introduced_error[1] << " "  << introduced_error[2]);
+
 	first_cloud_pub.publish(first_cloud);
 	second_cloud_pub.publish(second_cloud);
 
@@ -167,6 +171,8 @@ int main (int argc, char **argv)
 	{
 		first_cloud_pub.publish(first_cloud);
 		second_cloud_pub.publish(second_cloud);
+		first_cloud_preprocessed_pub.publish(reg_srv.response.preprocessing_results[0].task_pointcloud);
+		second_cloud_preprocessed_pub.publish(reg_srv.response.preprocessing_results[1].task_pointcloud);
 		final_cloud_pub.publish(reg_srv.response.output_cloud);
 		ros::Duration(0.5).sleep();
 	}
