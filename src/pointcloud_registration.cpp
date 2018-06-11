@@ -357,12 +357,6 @@ void PCRegistration<PointType, FeatureType>::transformEstimationNDT(const FCP so
 template <typename PointType, typename FeatureType>
 void PCRegistration<PointType, FeatureType>::transformEstimationICP(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f transform, Eigen::Matrix4f init_guess)
 {	
-	// Instantiate our custom point representation (defined above) ...
-	MyPointRepresentation point_representation;
-	// ... and weight the 'curvature' dimension so that it is balanced against x, y, and z
-	point_representation.setRescaleValues (transform_alpha_);
-	ROS_DEBUG_STREAM("[PCRegistration] Initialized point_representation.");
-
 	// Align
 	pcl::IterativeClosestPointNonLinear<PCLPointNormal, PCLPointNormal> reg;
 	reg.setTransformationEpsilon (transform_epsilon_);
@@ -370,7 +364,7 @@ void PCRegistration<PointType, FeatureType>::transformEstimationICP(const FCP so
 	// Note: adjust this based on the size of your datasets
 	reg.setMaxCorrespondenceDistance (transform_max_dist_);  
 	// Set the point representation
-	reg.setPointRepresentation (boost::make_shared<const MyPointRepresentation> (point_representation));
+	//reg.setPointRepresentation (boost::make_shared<const MyPointRepresentation> (point_representation));
 	reg.setMaximumIterations (transform_max_iterations_);
 
 	// Remove NaNs, else estimate may crash

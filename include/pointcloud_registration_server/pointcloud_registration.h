@@ -42,27 +42,6 @@ public:
 	typedef typename pcl::PointCloud<FeatureType> FC;
 	typedef typename pcl::PointCloud<FeatureType>::Ptr FCP;
 
-	class MyPointRepresentation : public pcl::PointRepresentation <PCLPointNormal>
-	{
-    	using pcl::PointRepresentation<PCLPointNormal>::nr_dimensions_;
-  	public:
-    	MyPointRepresentation ()
-    	{
-	      	// Define the number of dimensions
-	      	nr_dimensions_ = 4;
-	    }
-
-	    // Override the copyToFloatArray method to define our feature vector
-	    virtual void copyToFloatArray (const PCLPointNormal &p, float * out) const
-	    {
-			// < x, y, z, curvature >
-			out[0] = p.x;
-			out[1] = p.y;
-			out[2] = p.z;
-			out[3] = p.curvature;
-	    }
-  	};
-
 private:
 	ros::NodeHandle nh_;
 	// --------------------------------------------------------------------------------------
