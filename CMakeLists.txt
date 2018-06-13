@@ -31,22 +31,11 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES reg_creation
+  LIBRARIES reg_creation pointcloud_registration
   CATKIN_DEPENDS pointcloud_processing_server
 )
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-
-add_executable(pointcloud_registration src/pointcloud_registration.cpp)
-target_link_libraries( 
-  pointcloud_registration
-  ${catkin_LIBRARIES}
-)
-add_dependencies(
-  pointcloud_registration
-  ${pointcloud_registration_server_EXPORTED_TARGETS}
-   ${catkin_EXPORTED_TARGETS}
-)
 
 add_executable(registration_example_client src/registration_example_client.cpp)
 target_link_libraries( 
@@ -59,6 +48,24 @@ add_dependencies(
    ${catkin_EXPORTED_TARGETS}
 )
 
+add_executable(registration_server src/registration_server.cpp)
+target_link_libraries( 
+  registration_server pointcloud_registration
+  ${catkin_LIBRARIES}
+)
+add_dependencies(
+  registration_server
+  ${pointcloud_registration_server_EXPORTED_TARGETS}
+   ${catkin_EXPORTED_TARGETS}
+)
+
+add_library(pointcloud_registration src/pointcloud_registration.cpp )
+target_link_libraries( 
+  pointcloud_registration
+  ${catkin_LIBRARIES}
+)
+add_dependencies(pointcloud_registration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 add_library(reg_creation src/reg_creation.cpp )
 target_link_libraries( 
   reg_creation
@@ -69,5 +76,5 @@ add_dependencies(reg_creation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPOR
 ## Install project namespaced headers
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
+  FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
   PATTERN ".svn" EXCLUDE)

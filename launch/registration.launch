@@ -18,15 +18,15 @@
     name    = "pointcloud_processing_server"
     pkg     = "pointcloud_processing_server"
     type    = "pointcloud_processing_server"
-    args    = ""
+    args    = "-intensity"
     output  = "screen"
   >
   </node>
   <node
-    name    = "pointcloud_registration"
+    name    = "registration_server"
     pkg     = "pointcloud_registration_server"
-    type    = "pointcloud_registration"
-    args    = ""
+    type    = "registration_server"
+    args    = "-intensity"
     output  = "screen"
   >
   </node>

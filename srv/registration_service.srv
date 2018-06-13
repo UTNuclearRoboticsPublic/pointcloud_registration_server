@@ -1,12 +1,15 @@
 uint8 POINT_TYPE_XYZ=0
 uint8 POINT_TYPE_XYZI=1
 uint8 POINT_TYPE_XYZN=2
-uint8 INTEREST_IND_NONE=0
-uint8 INTEREST_IND_NORM=1
-uint8 INTEREST_IND_SIFT=2
-uint8 FEATURE_IND_NONE=0
-uint8 FEATURE_IND_NORM=1
-uint8 FEATURE_IND_SIFT=2
+uint8 INTEREST_TYPE_NONE=0
+uint8 INTEREST_TYPE_NORM=1
+uint8 INTEREST_TYPE_SIFT=2
+uint8 FEATURE_TYPE_NONE=0
+uint8 FEATURE_TYPE_XYZN=1
+uint8 FEATURE_TYPE_SIFT=2
+uint8 CORRESP_TYPE_NONE=0
+uint8 TRANSFORM_METHOD_ICP=1
+uint8 TRANSFORM_METHOD_NDT=2
 
 # ------------------------------ REQUEST ------------------------------
 
@@ -29,10 +32,6 @@ float32 translation_threshold
 float32 rotation_threshold
 
 # -------- Preprocessing Stuff -------- 
-bool voxelize_input
-float32 voxel_leaf_size_preprocess
-float32[] clipping_dimensions_preprocess
-bool center_clipping_base
 pointcloud_processing_server/pointcloud_task[] preprocessing_tasks
 
 # -------- Preprocessing Stuff -------- 

@@ -56,7 +56,7 @@ namespace RegCreation
 		std::vector<float> temp_float_vector;
 		switch(srv->request.registration_type)
 		{
-			case 1: 		// ICP
+			case pointcloud_registration_server::registration_service::Request::TRANSFORM_METHOD_ICP:
 				if( !nh.param<float>(yaml_file_name + "/" + name + "/ksearch", temp_float, 30) )
 					ROS_WARN_STREAM("[RegCreation] Failed to get ksearch - defaulting to true.");
 				srv->request.parameters.push_back(temp_float);
@@ -68,7 +68,7 @@ namespace RegCreation
 				for(int i=0; i<4; i++)
 					srv->request.parameters.push_back(temp_float_vector[i]);
 				break;
-			case 2: 		// NDT
+			case pointcloud_registration_server::registration_service::Request::TRANSFORM_METHOD_NDT:
 				if( !nh.param<float>(yaml_file_name + "/" + name + "/step_size", temp_float, 0.1) )
 					ROS_WARN_STREAM("[RegCreation] Failed to get step_size - defaulting to true.");
 				srv->request.parameters.push_back(temp_float);

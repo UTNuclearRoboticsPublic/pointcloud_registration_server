@@ -69,7 +69,7 @@ int main (int argc, char **argv)
 	ros::Publisher first_cloud_preprocessed_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/first_cloud_preprocessed", 1);
 	ros::Publisher second_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/second_cloud", 1);
 	ros::Publisher final_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("registration_example/final_cloud", 1);
-	ros::ServiceClient client = nh.serviceClient<pointcloud_registration_server::registration_service>("register_pointclouds");
+	ros::ServiceClient client = nh.serviceClient<pointcloud_registration_server::registration_service>("pointcloud_registration");
 	
 	if(!load_from_bags)
 	{
@@ -148,7 +148,6 @@ int main (int argc, char **argv)
 	}
 	pcl::toROSMsg(*second_cloud_pcl, second_cloud);
 
-	ROS_ERROR_STREAM("errors: " << introduced_error[0] << " " << introduced_error[1] << " "  << introduced_error[2]);
 
 	first_cloud_pub.publish(first_cloud);
 	second_cloud_pub.publish(second_cloud);
@@ -157,6 +156,31 @@ int main (int argc, char **argv)
 	pointcloud_registration_server::registration_service reg_srv;
 	reg_srv.request.cloud_list.push_back(first_cloud);
 	reg_srv.request.cloud_list.push_back(second_cloud);
+
+	reg_srv.request.point_type = 					pointcloud_registration_server::registration_service::Request::  POINT_TYPE_XYZ;
+	reg_srv.request.feature_type = 					pointcloud_registration_server::registration_service::Request::  FEATURE_TYPE_XYZN;
+	reg_srv.request.interest_point_type = 			pointcloud_registration_server::registration_service::Request::  INTEREST_TYPE_NONE;
+	reg_srv.request.correspondence_search_type = 	pointcloud_registration_server::registration_service::Request::  CORRESP_TYPE_NONE;
+	reg_srv.request.transformation_search_type = 	pointcloud_registration_server::registration_service::Request::  TRANSFORM_METHOD_NDT;
+
+//int32 point_type
+//int32 feature_type
+//int32 interest_point_type
+//int32 correspondence_search_type
+//int32 transformation_search_type
+//
+//uint8 POINT_TYPE_XYZ=0
+//uint8 POINT_TYPE_XYZI=1
+//uint8 POINT_TYPE_XYZN=2
+//uint8 INTEREST_TYPE_NONE=0
+//uint8 INTEREST_TYPE_NORM=1
+//uint8 INTEREST_TYPE_SIFT=2
+//uint8 FEATURE_TYPE_NONE=0
+//uint8 FEATURE_TYPE_XYZN=1
+//uint8 FEATURE_TYPE_SIFT=2
+//uint8 TRANSFORM_METHOD_ICP=1
+//uint8 TRANSFORM_METHOD_NDT=2
+
 	RegCreation::registrationFromYAML(&reg_srv, "registration_example");
 	while(ros::ok() && !client.call(reg_srv))
 	{
