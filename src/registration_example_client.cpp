@@ -161,7 +161,7 @@ int main (int argc, char **argv)
 	reg_srv.request.feature_type = 					pointcloud_registration_server::registration_service::Request::  FEATURE_TYPE_XYZN;
 	reg_srv.request.interest_point_type = 			pointcloud_registration_server::registration_service::Request::  INTEREST_TYPE_NONE;
 	reg_srv.request.correspondence_search_type = 	pointcloud_registration_server::registration_service::Request::  CORRESP_TYPE_NONE;
-	reg_srv.request.transformation_search_type = 	pointcloud_registration_server::registration_service::Request::  TRANSFORM_METHOD_NDT;
+	reg_srv.request.transformation_search_type = 	pointcloud_registration_server::registration_service::Request::  TRANSFORM_METHOD_ICP;
 
 //int32 point_type
 //int32 feature_type

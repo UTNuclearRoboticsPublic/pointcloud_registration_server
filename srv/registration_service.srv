@@ -1,17 +1,34 @@
+
+# ------------------------------ DEFINES ------------------------------
+
+# ----------- Point Types -----------  
 uint8 POINT_TYPE_XYZ=0
 uint8 POINT_TYPE_XYZI=1
 uint8 POINT_TYPE_XYZN=2
+uint8 POINT_TYPE_XYZRGB=3
+uint8 POINT_TYPE_XYZRGBI=4
+uint8 POINT_TYPE_XYZRGBN=5
+
+# ------- Interest Point Types ------  
 uint8 INTEREST_TYPE_NONE=0
-uint8 INTEREST_TYPE_NORM=1
-uint8 INTEREST_TYPE_SIFT=2
-uint8 FEATURE_TYPE_NONE=0
+uint8 INTEREST_TYPE_SIFT=1
+
+# ---------- Feature Types ----------  
+uint8 FEATURE_TYPE_XYZ=0
 uint8 FEATURE_TYPE_XYZN=1
 uint8 FEATURE_TYPE_SIFT=2
-uint8 CORRESP_TYPE_NONE=0
-uint8 TRANSFORM_METHOD_ICP=1
-uint8 TRANSFORM_METHOD_NDT=2
 
-# ------------------------------ REQUEST ------------------------------
+# --- Correspondence Search Types ---  
+#  In many cases, correspondences are handled within transform_search objects
+#  In those cases, leave this as NONE
+uint8 CORRESP_TYPE_NONE=0
+
+# ------ Transform Search Types -----  
+uint8 TRANSFORM_METHOD_ICP=1
+uint8 TRANSFORM_METHOD_ICPNL=2
+uint8 TRANSFORM_METHOD_NDT=3
+
+# ------------------------------ REQUEST DATA ------------------------------
 
 # ----------- Overall Stuff -----------  
 sensor_msgs/PointCloud2[] cloud_list
@@ -37,10 +54,12 @@ pointcloud_processing_server/pointcloud_task[] preprocessing_tasks
 # -------- Preprocessing Stuff -------- 
 pointcloud_processing_server/pointcloud_task[] postprocessing_tasks
 
+
+
 ---
 
 
-# ------------------------------ RESPONSE ------------------------------
+# ------------------------------ RESPONSE DATA ------------------------------
 
 # -------- Preprocessing Stuff -------- 
 pointcloud_processing_server/pointcloud_task_result[] preprocessing_results

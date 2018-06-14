@@ -44,8 +44,8 @@ private:
   	// 4) CORRESPONDENCES: estimates the relationships between individual points in the target clouds which may represent the same ground-truth points
   	void correspondenceEstimation(const FCP feature_cloud, const FCP correspondence_cloud, int algorithm_type);
   	// 5) TRANSFORM: determines the transform which satisfies the most correspondences
-	void transformEstimation(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, int algorithm_type);
-	void transformEstimation(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f initial_transform_guess, int transform_type);
+	void transformEstimation(const FCP target_cloud, const FCP source_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, int algorithm_type);
+	void transformEstimation(const FCP target_cloud, const FCP source_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f initial_transform_guess, int transform_type);
 	// 6) POSTPROCESSING: voxelization, clipping, transforms, segmentation...
   	pointcloud_processing_server::pointcloud_task_result postprocessing(const PCP input_cloud, const PCP postprocessed_cloud, std::vector<pointcloud_processing_server::pointcloud_task> postprocessing_tasks);
 	// --------------------------------------------------------------------------------------
@@ -60,8 +60,8 @@ private:
 
 	// -------------------------------------------
   	// *** Transform Estimation Methods ***
-  	void transformEstimationNDT(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f init_guess);
-  	void transformEstimationICP(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f init_guess);
+  	void transformEstimationNDT(const FCP target_cloud, const FCP source_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f init_guess);
+  	void transformEstimationICP(const FCP target_cloud, const FCP source_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f init_guess);
 
   	// --------------------------------------------------------------------------------------
   	// *** Utility Functions ***
@@ -164,10 +164,11 @@ PCRegistration<PointType, FeatureType>::PCRegistration(pointcloud_registration_s
 		ROS_DEBUG_STREAM("[PCRegistration]   Feature cloud sizes are " << feature_clouds_[i-1]->points[30].x << " " << feature_clouds_[i-1]->points.size() << " and " << feature_clouds_[i]->points.size());
 		ROS_DEBUG_STREAM("[PCRegistration]   Correspondence cloud sizes are " << correspondence_clouds_[i-1]->points[30].x << " "  << correspondence_clouds_[i-1]->points.size() << " and " << correspondence_clouds_[i]->points.size());
 		Eigen::Matrix4f current_transform = Eigen::Matrix4f::Identity();
+		*transformed_clouds_[i] = *correspondence_clouds_[i];
 		while( ros::ok() && ( num_iterations_[i] == 0 || (req.repeatedly_register && num_iterations_[i] < 10 && translation_offset_[i] > req.translation_threshold && rotation_offset_[i] > req.rotation_threshold) ) )
 		{
 			// Actually Register
-			transformEstimation(correspondence_clouds_[i-1], correspondence_clouds_[i], transformed_clouds_[i], current_transform, req.transformation_search_type);
+			transformEstimation(correspondence_clouds_[i-1], transformed_clouds_[i], transformed_clouds_[i], current_transform, req.transformation_search_type);
 			// Check Last Step Size
 			rotation_offset_[i] = sqrt(pow( acos((static_cast<double>(current_transform(0,0))+static_cast<double>(current_transform(1,1))+static_cast<double>(current_transform(2,2))-1)/2) ,2));
 			translation_offset_[i] = sqrt(pow(static_cast<double>(current_transform(0,3)),2) + pow(static_cast<double>(current_transform(1,3)),2) + pow(static_cast<double>(current_transform(2,3)),2));
@@ -353,13 +354,13 @@ void PCRegistration<PointType, FeatureType>::correspondenceEstimation(const FCP 
 
 // --------------------------------------------------------------------------------------
 template <typename PointType, typename FeatureType>
-void PCRegistration<PointType, FeatureType>::transformEstimation(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, int transform_type)
+void PCRegistration<PointType, FeatureType>::transformEstimation(const FCP target_cloud, const FCP source_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, int transform_type)
 {
 	Eigen::Matrix4f initial_transform_guess = Eigen::Matrix4f::Identity();
 	transformEstimation(source_cloud, target_cloud, transformed_source, transform, initial_transform_guess, transform_type);
 }
 template <typename PointType, typename FeatureType>
-void PCRegistration<PointType, FeatureType>::transformEstimation(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f initial_transform_guess, int transform_type)
+void PCRegistration<PointType, FeatureType>::transformEstimation(const FCP target_cloud, const FCP source_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f initial_transform_guess, int transform_type)
 {
 	switch(transform_type)
 	{
@@ -382,7 +383,7 @@ void PCRegistration<PointType, FeatureType>::transformEstimation(const FCP sourc
 }
 
 template <typename PointType, typename FeatureType>
-void PCRegistration<PointType, FeatureType>::transformEstimationNDT(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f init_guess)
+void PCRegistration<PointType, FeatureType>::transformEstimationNDT(const FCP target_cloud, const FCP source_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f init_guess)
 {	
 	ROS_DEBUG_STREAM("[PCRegistration] Starting NDT Process!  Epsilon: " << transform_epsilon_ << "  Max_It: " << transform_max_iterations_ << "  Step Size: " << transform_step_size_ << "  Res: " << transform_resolution_);
 
@@ -411,7 +412,7 @@ void PCRegistration<PointType, FeatureType>::transformEstimationNDT(const FCP so
 
 
 template <typename PointType, typename FeatureType>
-void PCRegistration<PointType, FeatureType>::transformEstimationICP(const FCP source_cloud, const FCP target_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f init_guess)
+void PCRegistration<PointType, FeatureType>::transformEstimationICP(const FCP target_cloud, const FCP source_cloud, const FCP transformed_source, Eigen::Matrix4f &transform, Eigen::Matrix4f init_guess)
 {	
 	ROS_DEBUG_STREAM("[PCRegistration] Starting a call to register two clouds via ICP. Epsilon: " << transform_epsilon_ << " Max_dist: " << transform_max_dist_ << " Max_iterations: " << transform_max_iterations_ );
 	// Align

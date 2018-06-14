@@ -24,7 +24,7 @@ bool registerPointclouds(pointcloud_registration_server::registration_service::R
 		{
 			switch(req.feature_type)
 			{
-				case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_NONE:
+				case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_XYZ:
 				{
 					//PCRegistration<pcl::PointXYZ, pcl::PointXYZ> registration(req);
 					break;

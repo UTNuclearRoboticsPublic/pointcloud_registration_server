@@ -11,6 +11,36 @@ registration_example:
   introduced_error:       [0.00, 0.1, 0]
   bag_name:               registered_cloud
   bag_topic:              laser_stitcher/output_cloud
+  # registration stuff:
+  registration_name:      icp
+  should_publish:         true
+  loop_until_threshold:   true
+  translation_threshold:  0.0005
+  rotation_threshold:     0.001
+  point_type:             XYZ     # XYZ, XYZN, XYZRGB, XYZRGBN
+  feature_type:           XYZN    # XYZ, XYZN, XYZRGB, XYZRGBN
+  interest_point_type:    NONE    # NONE
+  correspondence_type:    NONE    # NONE
+  transformation_type:    NDT     # ICP, ICPNL, NDT
+  # transformation parameters
+  transform_epsilon:      0.0005
+  transform_max_it:       35
+  # feature algorithm parameters
+
+  # registration algorithm parameters
+  icp: 
+    registration_type:    1
+    epsilon:              0.0005
+    max_iterations:       35
+    ksearch:              30
+    max_dist:             0.1
+    alpha:                [1.0, 1.0, 1.0, 1.0]
+  ndt: 
+    registration_type:    2
+    epsilon:              0.01
+    max_iterations:       35
+    step_size:            0.1
+    resolution:           0.5
   # preprocessing stuff 
   preprocess:
     min_cloud_size:       50
@@ -45,23 +75,3 @@ registration_example:
         type:             voxelizing
         leaf_sizes:       [ 0.02, 0.02, 0.02 ]
         keep_ordered:     false
-  # registration stuff:
-  registration_name:      icp
-  should_publish:         true
-  loop_until_threshold:   true
-  translation_threshold:  0.0005
-  rotation_threshold:     0.001
-  # registration algorithm parameters
-  icp: 
-    registration_type:    1
-    epsilon:              0.0005
-    max_iterations:       35
-    ksearch:              30
-    max_dist:             0.1
-    alpha:                [1.0, 1.0, 1.0, 1.0]
-  ndt: 
-    registration_type:    2
-    epsilon:              0.01
-    max_iterations:       35
-    step_size:            0.1
-    resolution:           0.5
