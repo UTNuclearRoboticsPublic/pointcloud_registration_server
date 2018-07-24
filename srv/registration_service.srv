@@ -5,18 +5,27 @@
 uint8 POINT_TYPE_XYZ=0
 uint8 POINT_TYPE_XYZI=1
 uint8 POINT_TYPE_XYZN=2
-uint8 POINT_TYPE_XYZRGB=3
-uint8 POINT_TYPE_XYZRGBI=4
-uint8 POINT_TYPE_XYZRGBN=5
+uint8 POINT_TYPE_XYZNI=3
+uint8 POINT_TYPE_XYZRGB=4
+uint8 POINT_TYPE_XYZRGBI=5
+uint8 POINT_TYPE_XYZRGBN=6
+uint8 POINT_TYPE_XYZRGBNI=7
 
 # ------- Interest Point Types ------  
 uint8 INTEREST_TYPE_NONE=0
 uint8 INTEREST_TYPE_SIFT=1
 
 # ---------- Feature Types ----------  
+#   If no special feature is required, just use the same type as used for the POINT_TYPE above
 uint8 FEATURE_TYPE_XYZ=0
-uint8 FEATURE_TYPE_XYZN=1
-uint8 FEATURE_TYPE_SIFT=2
+uint8 FEATURE_TYPE_XYZI=1
+uint8 FEATURE_TYPE_XYZN=2
+uint8 FEATURE_TYPE_XYZNI=3
+uint8 FEATURE_TYPE_XYZRGB=4
+uint8 FEATURE_TYPE_XYZRGBI=5
+uint8 FEATURE_TYPE_XYZRGBN=6
+uint8 FEATURE_TYPE_XYZRGBNI=7
+uint8 FEATURE_TYPE_SIFT=8
 
 # --- Correspondence Search Types ---  
 #  In many cases, correspondences are handled within transform_search objects
@@ -40,20 +49,20 @@ int32 transformation_search_type
 
 # --------- Registration Stuff --------  
 bool should_publish
-int32 registration_type
 float32 epsilon
 int32 max_iterations
 float32[] parameters
 bool repeatedly_register
 float32 translation_threshold
 float32 rotation_threshold
+int32 max_transform_loops
 
 # -------- Preprocessing Stuff -------- 
 pointcloud_processing_server/pointcloud_task[] preprocessing_tasks
 
-# -------- Preprocessing Stuff -------- 
+# -------- Postprocessing Stuff -------- 
 pointcloud_processing_server/pointcloud_task[] postprocessing_tasks
-
+bool transform_raw_clouds
 
 
 ---
@@ -73,7 +82,7 @@ float32[] postprocessing_time
 sensor_msgs/PointCloud2 output_cloud
 sensor_msgs/PointCloud2[] individual_clouds
 sensor_msgs/PointCloud2[] individual_clouds_postprocessed
-geometry_msgs/Pose[] transforms
+geometry_msgs/Transform[] transforms
 float32[] registration_time
 int32 iterations_run
 float32 total_time

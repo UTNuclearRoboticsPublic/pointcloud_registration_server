@@ -5,23 +5,24 @@ registration_example:
   load_cloud:             true
   initial_pause:          3.0
   betwixt_pause:          8.0
-  bag_name_1:             /home/conor/catkin-ws/data/Tunnel_Scans/Sep_27_2017/400_mrad_s.bag
-  bag_name_2:             /home/conor/catkin-ws/data/Tunnel_Scans/Sep_27_2017/400_mrad_s_moved.bag
+  bag_name_1:             /home/conor/catkin-ws/data/Highbay_Scans_SRS/first_scan.bag
+  bag_name_2:             /home/conor/catkin-ws/data/Highbay_Scans_SRS/second_scan.bag
   introduce_error:        true
-  introduced_error:       [0.00, 0.1, 0]
+  introduced_error:       [0.00, -0.0, 0.0, 0.0, 0.0, 0.0]
   bag_name:               registered_cloud
-  bag_topic:              laser_stitcher/output_cloud
+  bag_topic:              /laser_stitcher/local_dense_cloud
   # registration stuff:
   registration_name:      icp
-  should_publish:         true
+  transform_raw_clouds:   false
   loop_until_threshold:   true
   translation_threshold:  0.0005
   rotation_threshold:     0.001
-  point_type:             XYZ     # XYZ, XYZN, XYZRGB, XYZRGBN
-  feature_type:           XYZN    # XYZ, XYZN, XYZRGB, XYZRGBN
+  max_transform_loops:    25  
+  point_type:             XYZI    # XYZ, XYZN, XYZRGB, XYZRGBN, XYZI, XYZNI
+  feature_type:           XYZNI   # XYZ, XYZN, XYZRGB, XYZRGBN
   interest_point_type:    NONE    # NONE
   correspondence_type:    NONE    # NONE
-  transformation_type:    NDT     # ICP, ICPNL, NDT
+  transformation_type:    ICP     # ICP, ICPNL, NDT
   # transformation parameters
   transform_epsilon:      0.0005
   transform_max_it:       35
@@ -33,7 +34,7 @@ registration_example:
     epsilon:              0.0005
     max_iterations:       35
     ksearch:              30
-    max_dist:             0.1
+    max_dist:             0.2
     alpha:                [1.0, 1.0, 1.0, 1.0]
   ndt: 
     registration_type:    2
@@ -52,11 +53,11 @@ registration_example:
         map_name:         base
       clip: 
         type:             clipping
-        box:              [ -1, 5, -2.4, 2.4, -0.7, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        box:              [ -1, 5, -2.4, 2.4, -0.7, 1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         keep_ordered:     true
       voxelize:           
         type:             voxelizing
-        leaf_sizes:       [ 0.2, 0.1, 0.2 ]
+        leaf_sizes:       [ 0.1, 0.1, 0.1 ]
         keep_ordered:     false
       to_map:
         type:             transform

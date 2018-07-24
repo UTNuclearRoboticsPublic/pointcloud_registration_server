@@ -11,9 +11,12 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs 
   geometry_msgs 
   sensor_msgs 
+  visualization_msgs
   message_generation
   pointcloud_processing_server
+  manual_pointcloud_alignment
   tf
+  tf2
 )
 
 ## System dependencies are found with CMake's conventions
@@ -32,7 +35,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES reg_creation pointcloud_registration
-  CATKIN_DEPENDS pointcloud_processing_server
+  CATKIN_DEPENDS pointcloud_processing_server manual_pointcloud_alignment
 )
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})

@@ -9,6 +9,13 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
+// to introduce error
+#include <geometry_msgs/TransformStamped.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+#include <manual_pointcloud_alignment/manual_pointcloud_alignment.h>
+//#include <tf/Quaternion.h>
+
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
@@ -55,6 +62,8 @@ int main (int argc, char **argv)
 	std::string bag_name_1;
 	std::string bag_name_2; 
 	nh.param<bool>("registration_example/load_cloud", load_from_bags, false);
+	if(load_from_bags)
+		nh.param<std::string>("registration_example/bag_topic", topic, "laser_mapper/local_dense_cloud");
 	nh.param<std::string>("registration_example/bag_name_1", bag_name_1, "./cloud_1.bag");
 	nh.param<std::string>("registration_example/bag_name_2", bag_name_2, "./cloud_2.bag");
 
@@ -111,6 +120,7 @@ int main (int argc, char **argv)
 
 		BOOST_FOREACH(rosbag::MessageInstance const m, view_1)
 	    {
+	    	ROS_INFO_STREAM("actually entering the loop");
 	        sensor_msgs::PointCloud2::ConstPtr cloud_1_ptr = m.instantiate<sensor_msgs::PointCloud2>();
 	        if (cloud_1_ptr != NULL)
 	            first_cloud = *cloud_1_ptr;
@@ -137,49 +147,48 @@ int main (int argc, char **argv)
 	    ROS_INFO_STREAM("[RegistrationClient] Both clouds collected from bag files - cloud sizes are " << first_cloud.height*first_cloud.width << " and " << second_cloud.height*second_cloud.width << " points, respectively.");
 	}
 
-	ROS_INFO_STREAM("[RegistrationClient] Introducing specified error: " << introduced_error[0] << " " << introduced_error[1] << " " << introduced_error[2]);
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr second_cloud_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
-	pcl::fromROSMsg(second_cloud, *second_cloud_pcl);
-	for(int j=0; j<second_cloud_pcl->points.size(); j++)
-	{
-		second_cloud_pcl->points[j].x += introduced_error[0];
-		second_cloud_pcl->points[j].y += introduced_error[1];
-		second_cloud_pcl->points[j].z += introduced_error[2];
-	}
-	pcl::toROSMsg(*second_cloud_pcl, second_cloud);
-
+	ROS_INFO_STREAM("[RegistrationClient] Introducing specified error:");
+	ROS_INFO_STREAM("   Translation: " << introduced_error[0] << " " << introduced_error[1] << " " << introduced_error[2]);
+	ROS_INFO_STREAM("   Rotation:    " << introduced_error[3] << " " << introduced_error[4] << " " << introduced_error[5]);
+	tf::Quaternion quat_tf = tf::createQuaternionFromRPY(introduced_error[3], introduced_error[4], introduced_error[5]);
+	geometry_msgs::TransformStamped error_transform; 
+	error_transform.header = second_cloud.header;
+	error_transform.transform.rotation.x = quat_tf.getAxis().getX()*sin(quat_tf.getAngle()/2);
+	error_transform.transform.rotation.y = quat_tf.getAxis().getY()*sin(quat_tf.getAngle()/2);
+	error_transform.transform.rotation.z = quat_tf.getAxis().getZ()*sin(quat_tf.getAngle()/2);
+	error_transform.transform.rotation.w = cos(quat_tf.getAngle()/2);
+	error_transform.transform.translation.x = introduced_error[0];
+	error_transform.transform.translation.y = introduced_error[1];
+	error_transform.transform.translation.z = introduced_error[2];
+	// ----------- Performing Rotation -----------
+	sensor_msgs::PointCloud2 second_cloud_transformed;
+	tf2::doTransform (second_cloud, second_cloud_transformed, error_transform);
 
 	first_cloud_pub.publish(first_cloud);
-	second_cloud_pub.publish(second_cloud);
+	second_cloud_pub.publish(second_cloud_transformed);
+
+
+	ROS_INFO_STREAM("[RegistrationClient] Interposing manual error alignment.");
+	ros::ServiceClient manual_alignment_server = nh.serviceClient<manual_pointcloud_alignment::manual_alignment_service>("manual_pointcloud_alignment/align_clouds");
+	manual_pointcloud_alignment::manual_alignment_service alignment_service;
+	alignment_service.request.fixed_cloud = first_cloud;
+	alignment_service.request.cloud_to_align = second_cloud_transformed;
+	alignment_service.request.iterate_input = true;
+	alignment_service.request.input_type = manual_pointcloud_alignment::manual_alignment_service::Request::MANUAL_POINTCLOUD_ALIGNMENT_INPUT_TYPE_TERMINAL;
+	alignment_service.request.voxelize_inputs = true;
+	alignment_service.request.voxel_leaf_size = 0.03;
+	while(ros::ok() && !manual_alignment_server.call(alignment_service))
+	{
+		ROS_ERROR_STREAM("[RegistrationClient] Attempt to call alignment service failed... prob not up yet. Waiting and trying again.");
+		ros::Duration(0.5).sleep();
+	}
+	ROS_INFO_STREAM("[RegistrationClient] Final manual transform: " << alignment_service.response.transform);
+
 
 	// Run the registration service
 	pointcloud_registration_server::registration_service reg_srv;
 	reg_srv.request.cloud_list.push_back(first_cloud);
-	reg_srv.request.cloud_list.push_back(second_cloud);
-
-	reg_srv.request.point_type = 					pointcloud_registration_server::registration_service::Request::  POINT_TYPE_XYZ;
-	reg_srv.request.feature_type = 					pointcloud_registration_server::registration_service::Request::  FEATURE_TYPE_XYZN;
-	reg_srv.request.interest_point_type = 			pointcloud_registration_server::registration_service::Request::  INTEREST_TYPE_NONE;
-	reg_srv.request.correspondence_search_type = 	pointcloud_registration_server::registration_service::Request::  CORRESP_TYPE_NONE;
-	reg_srv.request.transformation_search_type = 	pointcloud_registration_server::registration_service::Request::  TRANSFORM_METHOD_ICP;
-
-//int32 point_type
-//int32 feature_type
-//int32 interest_point_type
-//int32 correspondence_search_type
-//int32 transformation_search_type
-//
-//uint8 POINT_TYPE_XYZ=0
-//uint8 POINT_TYPE_XYZI=1
-//uint8 POINT_TYPE_XYZN=2
-//uint8 INTEREST_TYPE_NONE=0
-//uint8 INTEREST_TYPE_NORM=1
-//uint8 INTEREST_TYPE_SIFT=2
-//uint8 FEATURE_TYPE_NONE=0
-//uint8 FEATURE_TYPE_XYZN=1
-//uint8 FEATURE_TYPE_SIFT=2
-//uint8 TRANSFORM_METHOD_ICP=1
-//uint8 TRANSFORM_METHOD_NDT=2
+	reg_srv.request.cloud_list.push_back(alignment_service.response.aligned_cloud);
 
 	RegCreation::registrationFromYAML(&reg_srv, "registration_example");
 	while(ros::ok() && !client.call(reg_srv))
@@ -189,12 +198,12 @@ int main (int argc, char **argv)
 	}
 
 	ROS_INFO_STREAM("[RegistrationClient] Successfully finished registration call! Time costs: " );
-	ROS_INFO_STREAM("    1st Preprocessing: " << reg_srv.response.preprocessing_time[0] << "  2nd Preprocessing: " << reg_srv.response.preprocessing_time[1] << "  Registration: " << reg_srv.response.registration_time[0]);
+	//ROS_INFO_STREAM("    1st Preprocessing: " << reg_srv.response.preprocessing_time[0] << "  2nd Preprocessing: " << reg_srv.response.preprocessing_time[1] << "  Registration: " << reg_srv.response.registration_time[0]);
 
 	while(ros::ok())
 	{
 		first_cloud_pub.publish(first_cloud);
-		second_cloud_pub.publish(second_cloud);
+		second_cloud_pub.publish(second_cloud_transformed);
 		first_cloud_preprocessed_pub.publish(reg_srv.response.preprocessing_results[0].task_pointcloud);
 		second_cloud_preprocessed_pub.publish(reg_srv.response.preprocessing_results[1].task_pointcloud);
 		final_cloud_pub.publish(reg_srv.response.output_cloud);
