@@ -86,3 +86,5 @@ geometry_msgs/Transform[] transforms
 float32[] registration_time
 int32 iterations_run
 float32 total_time
+
+bool success

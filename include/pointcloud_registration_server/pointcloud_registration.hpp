@@ -39,11 +39,11 @@ PCRegistration<PointType, FeatureType>::PCRegistration(pointcloud_registration_s
 	for(int i=1; i<req.cloud_list.size(); i++)
 	{
 		ROS_INFO_STREAM("[PCRegistration] Attempting " << i << "th round of transforms.");
-		ROS_DEBUG_STREAM("[PCRegistration]   Input cloud sizes are " << input_clouds_[i-1]->points[30].x << " " << input_clouds_[i-1]->points.size() << " and " << input_clouds_[i]->points.size());
-		ROS_DEBUG_STREAM("[PCRegistration]   Preprocessed cloud sizes are " << preprocessed_clouds_[i-1]->points[30].x << " " << preprocessed_clouds_[i-1]->points.size() << " and " << preprocessed_clouds_[i]->points.size());
-		ROS_DEBUG_STREAM("[PCRegistration]   Interest Point cloud sizes are " << interest_point_clouds_[i-1]->points[30].x << " " << interest_point_clouds_[i-1]->points.size() << " and " << interest_point_clouds_[i]->points.size());
-		ROS_DEBUG_STREAM("[PCRegistration]   Feature cloud sizes are " << feature_clouds_[i-1]->points[30].x << " " << feature_clouds_[i-1]->points.size() << " and " << feature_clouds_[i]->points.size());
-		ROS_DEBUG_STREAM("[PCRegistration]   Correspondence cloud sizes are " << correspondence_clouds_[i-1]->points[30].x << " "  << correspondence_clouds_[i-1]->points.size() << " and " << correspondence_clouds_[i]->points.size());
+		ROS_DEBUG_STREAM("[PCRegistration]   Input cloud sizes are " << input_clouds_[i-1]->points.size() << " and " << input_clouds_[i]->points.size());
+		ROS_DEBUG_STREAM("[PCRegistration]   Preprocessed cloud sizes are " << preprocessed_clouds_[i-1]->points.size() << " and " << preprocessed_clouds_[i]->points.size());
+		ROS_DEBUG_STREAM("[PCRegistration]   Interest Point cloud sizes are " << interest_point_clouds_[i-1]->points.size() << " and " << interest_point_clouds_[i]->points.size());
+		ROS_DEBUG_STREAM("[PCRegistration]   Feature cloud sizes are " << feature_clouds_[i-1]->points.size() << " and " << feature_clouds_[i]->points.size());
+		ROS_DEBUG_STREAM("[PCRegistration]   Correspondence cloud sizes are " << correspondence_clouds_[i-1]->points.size() << " and " << correspondence_clouds_[i]->points.size());
 		Eigen::Matrix4f current_transform = Eigen::Matrix4f::Identity();
 		*transformed_clouds_[i] = *correspondence_clouds_[i];
 		while( ros::ok() && ( num_iterations_[i] == 0 || (req.repeatedly_register && num_iterations_[i] < req.max_transform_loops && ( translation_offset_[i] > req.translation_threshold || rotation_offset_[i] > req.rotation_threshold ) ) ) )
@@ -471,6 +471,8 @@ bool PCRegistration<PointType, FeatureType>::populateServiceOutputs(pointcloud_r
 		previous_full_cloud = res.output_cloud;
 		ROS_INFO_STREAM("pop " << i << " " << res.individual_clouds_postprocessed.size());
 	}
+
+	res.success = true;
 
 	return false;
 }

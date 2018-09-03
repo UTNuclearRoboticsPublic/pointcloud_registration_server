@@ -8,6 +8,7 @@
 #include <pcl/registration/icp_nl.h>
 #include <pcl/registration/ndt.h>
 #include <pcl/registration/transforms.h>
+#include <pcl/features/normal_3d_omp.h>
 
 #include <eigen_conversions/eigen_msg.h>
 

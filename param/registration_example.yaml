@@ -5,8 +5,8 @@ registration_example:
   load_cloud:             true
   initial_pause:          3.0
   betwixt_pause:          8.0
-  bag_name_1:             /home/conor/catkin-ws/data/Highbay_Scans_SRS/first_scan.bag
-  bag_name_2:             /home/conor/catkin-ws/data/Highbay_Scans_SRS/second_scan.bag
+  bag_name_1:             /home/conor/ros_data/Highbay_Scans_SRS/first_scan.bag
+  bag_name_2:             /home/conor/ros_data/Highbay_Scans_SRS/second_scan.bag
   introduce_error:        true
   introduced_error:       [0.00, -0.0, 0.0, 0.0, 0.0, 0.0]
   bag_name:               registered_cloud
