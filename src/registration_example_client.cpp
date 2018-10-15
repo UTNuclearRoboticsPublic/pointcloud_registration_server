@@ -173,10 +173,6 @@ int main (int argc, char **argv)
 	manual_pointcloud_alignment::manual_alignment_service alignment_service;
 	alignment_service.request.fixed_cloud = first_cloud;
 	alignment_service.request.cloud_to_align = second_cloud_transformed;
-	alignment_service.request.iterate_input = true;
-	alignment_service.request.input_type = manual_pointcloud_alignment::manual_alignment_service::Request::MANUAL_POINTCLOUD_ALIGNMENT_INPUT_TYPE_TERMINAL;
-	alignment_service.request.voxelize_inputs = true;
-	alignment_service.request.voxel_leaf_size = 0.03;
 	while(ros::ok() && !manual_alignment_server.call(alignment_service))
 	{
 		ROS_ERROR_STREAM("[RegistrationClient] Attempt to call alignment service failed... prob not up yet. Waiting and trying again.");

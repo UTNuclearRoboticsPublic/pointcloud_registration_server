@@ -16,6 +16,8 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_representation.h>
 
+#include <pcl/keypoints/sift_keypoint.h>
+
 #include <geometry_msgs/Transform.h>
 
 // -------------------------------------------
@@ -53,6 +55,8 @@ private:
   	pointcloud_processing_server::pointcloud_task_result postprocessing(const PCP input_cloud, const PCP postprocessed_cloud, std::vector<pointcloud_processing_server::pointcloud_task> postprocessing_tasks);
 	// --------------------------------------------------------------------------------------
   	// *** Interest Point Estimation Methods *** 
+    void interestPointGenerationSIFTExplicit(const PCP input_cloud, const PCP interest_point_cloud);
+    void interestPointGenerationSIFT(const PCP input_cloud, const PCP interest_point_cloud);
 
   	// -------------------------------------------
   	// *** Feature Estimation Methods ***

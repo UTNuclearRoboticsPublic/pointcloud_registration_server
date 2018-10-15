@@ -115,7 +115,7 @@ void PCRegistration<PointType, FeatureType>::interestPointGeneration(const PCP i
 		// If SIFT interest points are selected
 		case pointcloud_registration_server::registration_service::Request::INTEREST_TYPE_SIFT:
 		{
-			//interestPointGenerationSIFT(input_cloud, interest_point_cloud);
+			interestPointGenerationSIFTExplicit(input_cloud, interest_point_cloud);
 			break;
 		}
 		// No interest point type is specified
@@ -129,7 +129,61 @@ void PCRegistration<PointType, FeatureType>::interestPointGeneration(const PCP i
 }
 // --------------------------------------------------------------------------------------
 
+template <> 
+void PCRegistration<pcl::PointXYZ, pcl::PointXYZ>::interestPointGenerationSIFTExplicit(const PCP input_cloud, const PCP interest_point_cloud)
+{
+	ROS_WARN_STREAM("[PCRegistration] SIFT Keypoints requested, but SIFT cannot be computed on this point type. Interest point cloud will be equal to input cloud.");
+	*interest_point_cloud = *input_cloud;
+}
+template <> 
+void PCRegistration<pcl::PointXYZ, pcl::PointNormal>::interestPointGenerationSIFTExplicit(const PCP input_cloud, const PCP interest_point_cloud)
+{
+	ROS_WARN_STREAM("[PCRegistration] SIFT Keypoints requested, but SIFT cannot be computed on this point type. Interest point cloud will be equal to input cloud.");
+	*interest_point_cloud = *input_cloud;
+}
+template <> 
+void PCRegistration<pcl::PointXYZI, pcl::PointXYZI>::interestPointGenerationSIFTExplicit(const PCP input_cloud, const PCP interest_point_cloud)
+{
+	interestPointGenerationSIFT(input_cloud, interest_point_cloud);
+}
+template <> 
+void PCRegistration<pcl::PointXYZI, pcl::PointXYZINormal>::interestPointGenerationSIFTExplicit(const PCP input_cloud, const PCP interest_point_cloud)
+{
+	interestPointGenerationSIFT(input_cloud, interest_point_cloud);
+}
+template <> 
+void PCRegistration<pcl::PointXYZRGB, pcl::PointXYZRGB>::interestPointGenerationSIFTExplicit(const PCP input_cloud, const PCP interest_point_cloud)
+{
+	interestPointGenerationSIFT(input_cloud, interest_point_cloud);
+}
+template <> 
+void PCRegistration<pcl::PointXYZRGB, pcl::PointXYZRGBNormal>::interestPointGenerationSIFTExplicit(const PCP input_cloud, const PCP interest_point_cloud)
+{
+	interestPointGenerationSIFT(input_cloud, interest_point_cloud);
+}
 
+// ---------------------------------------------------------
+template <typename PointType, typename FeatureType>
+void PCRegistration<PointType, FeatureType>::interestPointGenerationSIFT(const PCP input_cloud, const PCP feature_cloud)
+{
+	// EXPOSE THESE PARAMETERS
+	//   sift_scale
+	//   octave stuff
+    typedef typename pcl::SIFTKeypoint<PointType, pcl::PointWithScale> SiftObject;
+    SiftObject sift;
+    pcl::PointCloud<pcl::PointWithScale>::Ptr sift_cloud(new pcl::PointCloud<pcl::PointWithScale>);
+    typedef typename pcl::search::KdTree<PointType>::Ptr KDTreePtr;
+    KDTreePtr sift_tree(new pcl::search::KdTree<PointType> ());
+    sift.setSearchMethod(sift_tree);
+    sift.setScales(0.01, 3, 4);
+    sift.setMinimumContrast(0.001);
+    sift.setInputCloud(input_cloud);
+    sift.compute(*sift_cloud);
+
+    ROS_DEBUG_STREAM("[PCRegistration] Found " << sift_cloud->points.size() << " sift keypoints in cloud.");
+    
+    // do stuff to make feature_cloud
+}
 
 // ---------------------------------------------------------
 // No Features Estimation (PointXYZ -> PointXYZ)
