@@ -41,6 +41,11 @@ bool registerPointclouds(pointcloud_registration_server::registration_service::R
 
 					break;
 				}
+				case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_ITWF:
+				{
+					PCRegistration<pcl::PointXYZ, pcl::ITWFSignature84> registration(req, res);
+					break;
+				}
 				default:
 				{
 					ROS_ERROR_STREAM("[PCRegistration] Feature and Point type chosen not implemented. Requested types: " << req.point_type << " " << req.feature_type << ". Exiting service as failure.");
@@ -69,6 +74,11 @@ bool registerPointclouds(pointcloud_registration_server::registration_service::R
 
 					break;
 				}
+				case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_ITWF:
+				{
+					PCRegistration<pcl::PointXYZ, pcl::ITWFSignature84> registration(req, res);
+					break;
+				}
 				default:
 				{
 					ROS_ERROR_STREAM("[PCRegistration] Feature and Point type chosen not implemented. Requested types: " << req.point_type << " " << req.feature_type << ". Exiting service as failure.");
@@ -81,6 +91,14 @@ bool registerPointclouds(pointcloud_registration_server::registration_service::R
 		{
 
 			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::POINT_TYPE_WALL_DAMAGE:
+		{
+			case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_ITWF:
+			{
+				PCRegistration<pcl::PointWallDamage, pcl::ITWFSignature84> registration(req, res);
+				break;
+			}
 		}
 		default:
 		{

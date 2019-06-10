@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   pointcloud_processing_server
   manual_pointcloud_alignment
+  wall_features
   tf
   tf2
 )

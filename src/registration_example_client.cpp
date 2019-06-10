@@ -43,6 +43,9 @@ void pointcloudCallback(sensor_msgs::PointCloud2 input)
 
 int main (int argc, char **argv)
 { 
+  	if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) )
+    	ros::console::notifyLoggerLevelsChanged();  
+
 	ros::init(argc, argv, "registration_example");
 
 	ros::NodeHandle nh;
@@ -202,7 +205,7 @@ int main (int argc, char **argv)
 		second_cloud_pub.publish(second_cloud_transformed);
 		first_cloud_preprocessed_pub.publish(reg_srv.response.preprocessing_results[0].task_pointcloud);
 		second_cloud_preprocessed_pub.publish(reg_srv.response.preprocessing_results[1].task_pointcloud);
-		final_cloud_pub.publish(reg_srv.response.output_cloud);
+		final_cloud_pub.publish(reg_srv.response.full_cloud);
 		ros::Duration(0.5).sleep();
 	}
 

@@ -10,10 +10,12 @@ uint8 POINT_TYPE_XYZRGB=4
 uint8 POINT_TYPE_XYZRGBI=5
 uint8 POINT_TYPE_XYZRGBN=6
 uint8 POINT_TYPE_XYZRGBNI=7
+uint8 POINT_TYPE_WALL_DAMAGE=8
 
 # ------- Interest Point Types ------  
 uint8 INTEREST_TYPE_NONE=0
 uint8 INTEREST_TYPE_SIFT=1
+uint8 INTEREST_TYPE_WALL_MAXIMA=2
 
 # ---------- Feature Types ----------  
 #   If no special feature is required, just use the same type as used for the POINT_TYPE above
@@ -26,16 +28,22 @@ uint8 FEATURE_TYPE_XYZRGBI=5
 uint8 FEATURE_TYPE_XYZRGBN=6
 uint8 FEATURE_TYPE_XYZRGBNI=7
 uint8 FEATURE_TYPE_SIFT=8
+uint8 FEATURE_TYPE_ITWF=9
+uint8 FEATURE_TYPE_DIFF_NORM=10
 
 # --- Correspondence Search Types ---  
 #  In many cases, correspondences are handled within transform_search objects
 #  In those cases, leave this as NONE
 uint8 CORRESP_TYPE_NONE=0
+uint8 CORRESP_TYPE_DIST=1
+uint8 CORRESP_TYPE_DIST_HORZ=2
 
 # ------ Transform Search Types -----  
 uint8 TRANSFORM_METHOD_ICP=1
 uint8 TRANSFORM_METHOD_ICPNL=2
 uint8 TRANSFORM_METHOD_NDT=3
+uint8 TRANSFORM_METHOD_SVD=4
+uint8 TRANSFORM_METHOD_RANSAC=5
 
 # ------------------------------ REQUEST DATA ------------------------------
 
@@ -48,14 +56,10 @@ int32 correspondence_search_type
 int32 transformation_search_type
 
 # --------- Registration Stuff --------  
-bool should_publish
-float32 epsilon
-int32 max_iterations
-float32[] parameters
-bool repeatedly_register
-float32 translation_threshold
-float32 rotation_threshold
-int32 max_transform_loops
+float32[] interest_point_parameters
+float32[] feature_parameters
+float32[] correspondence_parameters
+float32[] transform_parameters
 
 # -------- Preprocessing Stuff -------- 
 pointcloud_processing_server/pointcloud_task[] preprocessing_tasks
@@ -63,7 +67,11 @@ pointcloud_processing_server/pointcloud_task[] preprocessing_tasks
 # -------- Postprocessing Stuff -------- 
 pointcloud_processing_server/pointcloud_task[] postprocessing_tasks
 bool transform_raw_clouds
+bool transform_feature_clouds
+bool transform_postprocessed_clouds
 
+# -------- Outputs -------- 
+bool should_publish
 
 ---
 
@@ -79,9 +87,10 @@ pointcloud_processing_server/pointcloud_task_result[] postprocessing_results
 float32[] postprocessing_time
 
 # --------- Registration Stuff --------  
-sensor_msgs/PointCloud2 output_cloud
-sensor_msgs/PointCloud2[] individual_clouds
-sensor_msgs/PointCloud2[] individual_clouds_postprocessed
+sensor_msgs/PointCloud2 full_cloud
+sensor_msgs/PointCloud2[] transformed_feature_clouds
+sensor_msgs/PointCloud2[] transformed_clouds
+sensor_msgs/PointCloud2[] transformed_clouds_postprocessed
 geometry_msgs/Transform[] transforms
 float32[] registration_time
 int32 iterations_run

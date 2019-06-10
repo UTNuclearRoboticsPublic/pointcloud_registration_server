@@ -5,43 +5,37 @@ registration_example:
   load_cloud:             true
   initial_pause:          3.0
   betwixt_pause:          8.0
-  bag_name_1:             /home/conor/ros_data/trees/15 ahg_between oak and cypress/laser_stitcher_1538945233.557749.bag # /home/conor/ros_data/trees/
-  bag_name_2:             /home/conor/ros_data/trees/16 ahg between cypress and tml/laser_stitcher_1538945505.050285.bag
+  bag_name_1:             /home/conor/ros_data/Fake_Walls/Segmented/screwy/5dps.bag
+  bag_name_2:             /home/conor/ros_data/Fake_Walls/Segmented/screwy/10dps.bag
   introduce_error:        true
-  introduced_error:       [0.00, -0.0, 0.0, 0.0, 0.0, 0.0]
+  introduced_error:       [0.10, -0.0, 0.0, 0.0, 0.0, 0.0]
   bag_name:               registered_cloud
-  bag_topic:              /laser_stitcher/full_scan
+  bag_topic:              /target_wall
   # registration stuff:
-  registration_name:      icp
-  transform_raw_clouds:   false
-  loop_until_threshold:   true
-  translation_threshold:  0.0005
-  rotation_threshold:     0.001
-  max_transform_loops:    25  
-  point_type:             XYZI    # XYZ, XYZN, XYZRGB, XYZRGBN, XYZI, XYZNI
-  feature_type:           XYZNI   # XYZ, XYZN, XYZRGB, XYZRGBN
-  interest_point_type:    NONE    # NONE
-  correspondence_type:    NONE    # NONE
-  transformation_type:    ICP     # ICP, ICPNL, NDT
-  # transformation parameters
-  transform_epsilon:      0.0005
-  transform_max_it:       35
-  # feature algorithm parameters
-
+  transform_raw_clouds:             false
+  transform_feature_clouds:         false
+  transform_postprocessed_clouds:   false
   # registration algorithm parameters
-  icp: 
-    registration_type:    1
-    epsilon:              0.0005
-    max_iterations:       35
+  point_type:             XYZI    # XYZ, XYZN, XYZRGB, XYZRGBN, XYZI, XYZNI
+  interest_point_parameters: 
+    interest_point_type:  NONE    # NONE
+  feature_parameters: 
+    feature_type:         XYZNI   # XYZ, XYZN, XYZRGB, XYZRGBN
     ksearch:              30
-    max_dist:             0.2
-    alpha:                [1.0, 1.0, 1.0, 1.0]
-  ndt: 
-    registration_type:    2
     epsilon:              0.01
     max_iterations:       35
     step_size:            0.1
     resolution:           0.5
+  correspondence_parameters:
+    correspondence_type:  NONE    # NONE
+    temp:                 1
+  transform_parameters:
+    transformation_type:  ICP     # ICP, ICPNL, NDT
+    epsilon:              0.0005
+    max_iterations:       35
+    max_dist:             0.2   
+    euclidian_epsilon:    0.002 
+    alpha:                [1.0, 1.0, 1.0, 1.0]
   # preprocessing stuff 
   preprocess:
     min_cloud_size:       50
