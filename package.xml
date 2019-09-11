@@ -44,6 +44,8 @@
   <run_depend>pointcloud_processing_server</run_depend>
   <build_depend>manual_pointcloud_alignment</build_depend>
   <run_depend>manual_pointcloud_alignment</run_depend>
+  <build_depend>wall_features</build_depend>
+  <run_depend>wall_features</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
