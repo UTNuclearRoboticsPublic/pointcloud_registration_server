@@ -149,6 +149,10 @@ bool RegCreation::basicTypeSpecification(pointcloud_registration_server::registr
 		srv->request.feature_type = pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_XYZRGBNI;
 	else if( temp_str.compare("SIFT") == 0 )
 		srv->request.feature_type = pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_SIFT;
+	else if( temp_str.compare("ITWF") == 0)
+		srv->request.feature_type = pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_ITWF;
+	else if( temp_str.compare("DIFF_NORM") == 0)
+		srv->request.feature_type = pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_DIFF_NORM;
 	else 
 	{
 		ROS_ERROR_STREAM("[RegCreation] Feature Type input is not a valid option: " << temp_str << ". Exiting RegCreation as a failure.");
@@ -175,6 +179,12 @@ bool RegCreation::basicTypeSpecification(pointcloud_registration_server::registr
 		ROS_WARN_STREAM("[RegCreation] Failed to get Feature Type - defaulting to NONE");
 	if( temp_str.compare("NONE") == 0 )
 		srv->request.correspondence_search_type = pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_NONE;
+	if( temp_str.compare("Normal") == 0 )
+		srv->request.correspondence_search_type = pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_NORMAL;
+	if( temp_str.compare("DIST") == 0 )
+		srv->request.correspondence_search_type = pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_DIST;
+	if( temp_str.compare("DIST_HORZ") == 0 )
+		srv->request.correspondence_search_type = pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_DIST_HORZ;
 	else 
 	{
 		ROS_ERROR_STREAM("[RegCreation] Correspondence Search Method input is not a valid option: " << temp_str << ". Exiting RegCreation as a failure.");
@@ -190,6 +200,8 @@ bool RegCreation::basicTypeSpecification(pointcloud_registration_server::registr
 		srv->request.transformation_search_type = pointcloud_registration_server::registration_service::Request::TRANSFORM_METHOD_ICPNL;
 	else if( temp_str.compare("NDT") == 0 )
 		srv->request.transformation_search_type = pointcloud_registration_server::registration_service::Request::TRANSFORM_METHOD_NDT;
+	else if( temp_str.compare("RANSAC") == 0 )
+		srv->request.transformation_search_type = pointcloud_registration_server::registration_service::Request::TRANSFORM_METHOD_RANSAC;
 	else 
 	{
 		ROS_ERROR_STREAM("[RegCreation] Transform Search Method input is not a valid option: " << temp_str << ". Exiting RegCreation as a failure.");
@@ -204,7 +216,21 @@ bool RegCreation::basicTypeSpecification(pointcloud_registration_server::registr
 //   The process-specific parameters are saved in a vector of floats within the service. 
 bool RegCreation::interestPointSpecificParameters(pointcloud_registration_server::registration_service *srv, std::string yaml_file_name, ros::NodeHandle nh)
 {
-
+	switch(srv->request.interest_point_type)
+	{
+		case pointcloud_registration_server::registration_service::Request::INTEREST_TYPE_NONE:
+		{
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::INTEREST_TYPE_SIFT:
+		{
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::INTEREST_TYPE_WALL_MAXIMA:
+		{
+			break;
+		}
+	}
 }
 
 
@@ -253,6 +279,48 @@ bool RegCreation::featureSpecificParameters(pointcloud_registration_server::regi
 			srv->request.transform_parameters.push_back(temp_float);
 			break;
 		}
+		case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_ITWF:
+		{
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/ksearch", temp_float, 30) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get ksearch - defaulting to 30.");
+			srv->request.transform_parameters.push_back(temp_float);
+			std::vector<int> dimensions;
+			if( !nh.getParam(yaml_file_name + "/feature_parameters/dimension_use", dimensions) )
+			{
+				ROS_WARN_STREAM("[RegCreation] Failed to get dimension_use specificaiton for ITWF - defaulting to use all dimensions.");
+				for(int i=0; i<7; i++)
+					dimensions.push_back(1);
+			}
+			else if (dimensions.size() != 7)
+			{
+				ROS_WARN_STREAM("[RegCreation] Found dimension_use specificaiton for ITWF, but it didn't have 7 indices - defaulting to use all dimensions.");
+				for(int i=0; i<7; i++)
+					dimensions.push_back(1);
+			}
+			for(int i=0; i<dimensions.size(); i++)
+				srv->request.transform_parameters.push_back(dimensions[i]);
+			std::vector<int> wall_coeffs;
+			if( !nh.getParam(yaml_file_name + "/feature_parameters/wall_coeffs", wall_coeffs) )
+			{
+				ROS_WARN_STREAM("[RegCreation] Failed to get wall_coeffs specificaiton for ITWF - exiting as failure.");
+				return -1;
+			}
+			else if (wall_coeffs.size() != 7)
+			{
+				ROS_WARN_STREAM("[RegCreation] Found wall_coeffs specificaiton for ITWF, but it didn't have 7 indices - exiting as failure.");
+				return -1;
+			}
+			for(int i=0; i<wall_coeffs.size(); i++)
+				srv->request.transform_parameters.push_back(wall_coeffs[i]);
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_FPFH:
+		{
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/search_radius", temp_float, 0.1) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get search radius - defaulting to 30.");
+			srv->request.transform_parameters.push_back(temp_float);
+			break;
+		}
 		default:
 		{
 			ROS_ERROR_STREAM("[RegCreation] Illegal feature_type specified with value " << srv->request.feature_type << ". Exiting as failure...");
@@ -275,11 +343,60 @@ bool RegCreation::correspondenceSpecificParameters(pointcloud_registration_serve
 	// Clear the parameter list
 	srv->request.correspondence_parameters.clear();
 
+	float temp_float;
+
 	switch(srv->request.correspondence_search_type)
 	{
-		case pointcloud_registration_server::registration_service::Request::TRANSFORM_METHOD_ICP:
+		case pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_NONE:
 		{
-
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_NORMAL:
+		{
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/ransac_rejection", temp_float, 0.15) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get decision regarding RANSAC correspondence rejection - defaulting to not apply rejection.");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/inlier_threshold", temp_float, 0.02) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get inlier threshold distance for RANSAC correspondence rejection - defaulting to 0.02.");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/ransac_iterations", temp_float, 10000) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get maximum number of iterations for RANSAC correspondence rejection - defaulting to 10000.");
+			srv->request.transform_parameters.push_back(temp_float);
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_DIST:
+		{
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/ransac_rejection", temp_float, 0.15) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get decision regarding RANSAC correspondence rejection - defaulting to not apply rejection.");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/inlier_threshold", temp_float, 0.02) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get inlier threshold distance for RANSAC correspondence rejection - defaulting to 0.02.");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/ransac_iterations", temp_float, 10000) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get maximum number of iterations for RANSAC correspondence rejection - defaulting to 10000.");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/band_height", temp_float, 0.15) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get ksearch - defaulting to 0.15");
+			srv->request.transform_parameters.push_back(temp_float);
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_DIST_HORZ:
+		{			
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/ransac_rejection", temp_float, 0.15) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get decision regarding RANSAC correspondence rejection - defaulting to not apply rejection.");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/inlier_threshold", temp_float, 0.02) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get inlier threshold distance for RANSAC correspondence rejection - defaulting to 0.02.");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/ransac_iterations", temp_float, 10000) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get maximum number of iterations for RANSAC correspondence rejection - defaulting to 10000.");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/band_height", temp_float, 0.15) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get ksearch - defaulting to 1");
+			srv->request.transform_parameters.push_back(temp_float);
+			if( !nh.param<float>(yaml_file_name + "/feature_parameters/band_length", temp_float, 1.0) )
+				ROS_WARN_STREAM("[RegCreation] Failed to get ksearch - defaulting to 30.");
+			srv->request.transform_parameters.push_back(temp_float);
 			break;
 		}
 	}
@@ -347,8 +464,9 @@ bool RegCreation::transformSpecificParameters(pointcloud_registration_server::re
 
 			break;
 		}
-		case pointcloud_registration_server::registration_service::Request::TRANSFORM_METHOD_RANSAC:
+		case pointcloud_registration_server::registration_service::Request::TRANSFORM_METHOD_AVG:
 		{
+
 			break;
 		}
 	}

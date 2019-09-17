@@ -37,7 +37,7 @@ PCRegistration<PointType, FeatureType>::PCRegistration(pointcloud_registration_s
 		ROS_DEBUG_STREAM("[PCRegistration]   Feature cloud sizes are " << feature_clouds_[i-1]->points.size() << " and " << feature_clouds_[i]->points.size());
 		ROS_DEBUG_STREAM("[PCRegistration] Estimating correspondences...");
 		// Correspondences
-		correspondenceEstimation	( feature_clouds_[i-1], feature_clouds_[i], correspondences_[i], req_->correspondence_search_type );
+		correspondenceEstimation	( interest_point_clouds_[i-1], interest_point_clouds_[i], feature_clouds_[i-1], feature_clouds_[i], correspondences_[i], req_->correspondence_search_type );
 		ROS_DEBUG_STREAM("[PCRegistration] Found " << correspondences_[i]->size() << " correspondences.");
 		// Transform Estimation
 		transformEstimation( feature_clouds_[i-1], feature_clouds_[i], transform_results_[i], correspondences_[i], req_->transformation_search_type );
@@ -464,11 +464,23 @@ void PCRegistration<PointType, FeatureType>::featureEstimationITWFFull(const PCP
 
 // --------------------------------------------------------------------------------------
 template <typename PointType, typename FeatureType>
-void PCRegistration<PointType, FeatureType>::correspondenceEstimation(const FCP target_features, const FCP source_features, const pcl::CorrespondencesPtr correspondences, int correspondence_type)
+void PCRegistration<PointType, FeatureType>::correspondenceEstimation(const PCP target_interest, const PCP source_interest, const FCP target_features, const FCP source_features, const pcl::CorrespondencesPtr correspondences, int correspondence_type)
 {
 	switch(correspondence_type)
 	{
 		case pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_NONE:
+		{
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_NORMAL:
+		{
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_DIST:
+		{
+			break;
+		}
+		case pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_DIST_HORZ:
 		{
 			break;
 		}
@@ -486,6 +498,22 @@ void PCRegistration<PointType, FeatureType>::correspondenceEstimation(const FCP 
 			break;
 		}
 	}
+	if(correspondence_type != pointcloud_registration_server::registration_service::Request::CORRESP_TYPE_NONE)
+		if(req_->correspondence_parameters[0] == 1)
+		{
+			int ransac_input_correspondences = correspondences->size();
+			pcl::registration::CorrespondenceRejectorSampleConsensus<PointType> sac;
+			sac.setInputSource(source_interest);
+			sac.setInputTarget(target_interest);
+			sac.setInlierThreshold(req_->correspondence_parameters[1]);
+			sac.setInputCorrespondences(correspondences);
+			sac.setMaximumIterations(req_->correspondence_parameters[2]);
+			pcl::CorrespondencesPtr output_correspondences(new pcl::Correspondences);
+			sac.getCorrespondences(*output_correspondences);    
+			*correspondences = *output_correspondences;
+			ROS_INFO_STREAM("[PCRegistration] After RANSAC correspondence rejection with threshold distance " << req_->correspondence_parameters[1] << 
+				", number of correspondences was reduced from " << ransac_input_correspondences << " to " << correspondences->size());
+		}
 }
 
 // --------------------------------------------------------------------------------------

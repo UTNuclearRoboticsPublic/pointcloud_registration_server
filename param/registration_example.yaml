@@ -28,6 +28,9 @@ registration_example:
     resolution:           0.5
   correspondence_parameters:
     correspondence_type:  NONE    # NONE
+    ransac_rejection:     false
+    inlier_threshold:     0.02
+    ransac_iterations:    10000
     temp:                 1
   transform_parameters:
     transformation_type:  ICP     # ICP, ICPNL, NDT

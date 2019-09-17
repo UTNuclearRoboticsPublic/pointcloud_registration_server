@@ -63,7 +63,7 @@ private:
   	// 3) FEATURES: reparameterize cloud into some form which may be more fitting for registration 
   	void featureEstimation(const PCP input_cloud, const PCP interest_point_cloud, const FCP feature_cloud);
   	// 4) CORRESPONDENCES: estimates the relationships between individual points in the target clouds which may represent the same ground-truth points
-  	void correspondenceEstimation(const FCP target_features, const FCP source_features, const pcl::CorrespondencesPtr correspondence_cloud, int correspondence_type);
+  	void correspondenceEstimation(const PCP target_interest, const PCP source_interest, const FCP target_features, const FCP source_features, const pcl::CorrespondencesPtr correspondence_cloud, int correspondence_type);
   	// 5) TRANSFORM: determines the transform which satisfies the most correspondences
 	  void transformEstimation(const FCP target_cloud, const FCP source_cloud, Eigen::Matrix4f &transform, pcl::CorrespondencesPtr correspondences, int algorithm_type);
 	  void transformEstimation(const FCP target_cloud, const FCP source_cloud, Eigen::Matrix4f &transform, pcl::CorrespondencesPtr correspondences, Eigen::Matrix4f initial_transform_guess, int transform_type);

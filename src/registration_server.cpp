@@ -94,10 +94,28 @@ bool registerPointclouds(pointcloud_registration_server::registration_service::R
 		}
 		case pointcloud_registration_server::registration_service::Request::POINT_TYPE_WALL_DAMAGE:
 		{
-			case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_ITWF:
+			switch(req.feature_type)
 			{
-				PCRegistration<pcl::PointWallDamage, pcl::ITWFSignature84> registration(req, res);
-				break;
+				case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_XYZI:
+				{
+					PCRegistration<pcl::PointXYZI, pcl::PointXYZI> registration(req, res);
+					break;
+				}
+				case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_XYZNI:
+				{
+					PCRegistration<pcl::PointXYZI, pcl::PointXYZINormal> registration(req, res);
+					break;
+				}
+				case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_SIFT:
+				{
+
+					break;
+				}
+				case pointcloud_registration_server::registration_service::Request::FEATURE_TYPE_ITWF:
+				{
+					PCRegistration<pcl::PointWallDamage, pcl::ITWFSignature84> registration(req, res);
+					break;
+				}
 			}
 		}
 		default:

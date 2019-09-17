@@ -30,13 +30,15 @@ uint8 FEATURE_TYPE_XYZRGBNI=7
 uint8 FEATURE_TYPE_SIFT=8
 uint8 FEATURE_TYPE_ITWF=9
 uint8 FEATURE_TYPE_DIFF_NORM=10
+uint8 FEATURE_TYPE_FPFH=11
 
 # --- Correspondence Search Types ---  
 #  In many cases, correspondences are handled within transform_search objects
 #  In those cases, leave this as NONE
 uint8 CORRESP_TYPE_NONE=0
-uint8 CORRESP_TYPE_DIST=1
-uint8 CORRESP_TYPE_DIST_HORZ=2
+uint8 CORRESP_TYPE_NORMAL=1
+uint8 CORRESP_TYPE_DIST=2
+uint8 CORRESP_TYPE_DIST_HORZ=3
 
 # ------ Transform Search Types -----  
 uint8 TRANSFORM_METHOD_ICP=1
@@ -44,6 +46,7 @@ uint8 TRANSFORM_METHOD_ICPNL=2
 uint8 TRANSFORM_METHOD_NDT=3
 uint8 TRANSFORM_METHOD_SVD=4
 uint8 TRANSFORM_METHOD_RANSAC=5
+uint8 TRANSFORM_METHOD_AVG=6
 
 # ------------------------------ REQUEST DATA ------------------------------
 
